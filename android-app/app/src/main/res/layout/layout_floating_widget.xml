@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/layoutFloatingRoot"
+    android:layout_width="320dp"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/bg_floating_card"
+    android:padding="12dp">
+
+    <!-- Header bar (Thanh kéo thả + Điều khiển) -->
+    <LinearLayout
+        android:id="@+id/layoutDragHandle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingBottom="8dp">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="🎙️ TRANSLATOR"
+            android:textColor="@color/primary"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.08" />
+
+        <TextView
+            android:id="@+id/btnSwapOverlay"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:gravity="center"
+            android:text="⇄"
+            android:textColor="@color/text_secondary"
+            android:textSize="14sp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:layout_marginEnd="4dp" />
+
+        <TextView
+            android:id="@+id/btnMinimize"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:gravity="center"
+            android:text="—"
+            android:textColor="@color/text_secondary"
+            android:textSize="14sp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:layout_marginEnd="4dp" />
+
+        <TextView
+            android:id="@+id/btnCloseOverlay"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:gravity="center"
+            android:text="✕"
+            android:textColor="@color/red"
+            android:textSize="13sp"
+            android:background="?attr/selectableItemBackgroundBorderless" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/divider_color"
+        android:layout_marginBottom="8dp" />
+
+    <!-- DÒNG 1: Tiếng gốc nhận diện theo thời gian thực -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="top">
+
+        <TextView
+            android:id="@+id/tvOriginalTag"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🇺🇸 EN"
+            android:textSize="10sp"
+            android:textStyle="bold"
+            android:textColor="@color/primary"
+            android:background="@drawable/bg_lang_tag"
+            android:paddingHorizontal="6dp"
+            android:paddingVertical="2dp"
+            android:layout_marginEnd="8dp"
+            android:layout_marginTop="2dp" />
+
+        <TextView
+            android:id="@+id/tvOriginalText"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/waiting_audio"
+            android:textColor="@color/text_primary"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:lineSpacingExtra="3dp" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/divider_color"
+        android:layout_marginVertical="8dp" />
+
+    <!-- DÒNG 2: Tiếng dịch hiển thị tức thì -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="top">
+
+        <TextView
+            android:id="@+id/tvTranslatedTag"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🇻🇳 VI"
+            android:textSize="10sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_green"
+            android:background="@drawable/bg_lang_tag"
+            android:paddingHorizontal="6dp"
+            android:paddingVertical="2dp"
+            android:layout_marginEnd="8dp"
+            android:layout_marginTop="2dp" />
+
+        <TextView
+            android:id="@+id/tvTranslatedText"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Bản dịch sẽ xuất hiện tại đây..."
+            android:textColor="@color/text_green"
+            android:textSize="15sp"
+            android:lineSpacingExtra="3dp" />
+    </LinearLayout>
+
+</LinearLayout>

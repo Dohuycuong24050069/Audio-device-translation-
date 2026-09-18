@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RealtimeTranslator – Dịch Âm Thanh Real-Time Siêu Tốc</title>
+  <meta name="description" content="Ứng dụng dịch âm thanh thiết bị thời gian thực chuyên nghiệp từ Tiếng Anh sang Tiếng Việt và ngược lại, hiển thị cửa sổ nổi (floating overlay)." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Ambient background lighting -->
+  <div class="bg-ambient">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+
+  <div class="app-wrapper">
+
+    <!-- === LEFT: Control Panel === -->
+    <aside class="control-panel glass-panel">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+            <line x1="12" x2="12" y1="19" y2="22"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1>LiveAudio Translator</h1>
+          <span>Hệ Thống Dịch Âm Thanh Thiết Bị</span>
+        </div>
+      </div>
+
+      <!-- Language Selector with Vector Flag Badges -->
+      <div class="lang-switcher">
+        <div class="lang-badge" id="lang-source-badge">
+          <div class="vector-badge src-badge" id="src-code-tag">EN</div>
+          <div>
+            <div class="lang-label">Nguồn âm thanh</div>
+            <div class="lang-name" id="lang-source-name">English</div>
+          </div>
+        </div>
+
+        <button class="swap-btn" id="btn-swap-lang" title="Đảo chiều dịch">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M7 16V4m0 0L3 8m4-4l4 4"/>
+            <path d="M17 8v12m0 0l4-4m-4 4l-4-4"/>
+          </svg>
+        </button>
+
+        <div class="lang-badge" id="lang-target-badge">
+          <div class="vector-badge tgt-badge" id="tgt-code-tag">VI</div>
+          <div>
+            <div class="lang-label">Bản dịch đích</div>
+            <div class="lang-name" id="lang-target-name">Tiếng Việt</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Action Button -->
+      <button class="main-btn" id="btn-start-translate">
+        <span class="btn-icon" id="main-btn-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+            <polygon points="5 3 19 12 5 21 5 3"/>
+          </svg>
+        </span>
+        <span class="btn-text">Bắt đầu dịch</span>
+        <div class="sound-wave" id="sound-wave">
+          <span></span><span></span><span></span><span></span><span></span>
+        </div>
+      </button>
+
+      <!-- Status Indicator -->
+      <div class="status-panel" id="status-panel">
+        <div class="status-dot" id="status-dot"></div>
+        <span id="status-text">Hệ thống sẵn sàng</span>
+      </div>
+
+      <!-- Audio Input Options -->
+      <div class="source-section">
+        <div class="section-label">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="4" x2="4" y1="21" y2="14"/><line x1="4" x2="4" y1="10" y2="3"/><line x1="12" x2="12" y1="21" y2="12"/><line x1="12" x2="12" y1="8" y2="3"/><line x1="20" x2="20" y1="21" y2="16"/><line x1="20" x2="20" y1="12" y2="3"/><line x1="1" x2="7" y1="14" y2="14"/><line x1="9" x2="15" y1="8" y2="8"/><line x1="17" x2="23" y1="16" y2="16"/>
+          </svg>
+          Nguồn thu âm thanh
+        </div>
+        <div class="radio-group">
+          <label class="radio-option" id="radio-mic">
+            <input type="radio" name="audio-source" value="mic" checked />
+            <span class="radio-custom"></span>
+            <svg class="opt-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/>
+            </svg>
+            <span>Microphone trực tiếp</span>
+          </label>
+          <label class="radio-option" id="radio-demo">
+            <input type="radio" name="audio-source" value="demo" />
+            <span class="radio-custom"></span>
+            <svg class="opt-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+            </svg>
+            <span>Giả lập âm thanh thiết bị (Demo)</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Display Options -->
+      <div class="source-section">
+        <div class="section-label">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+          Tùy chỉnh hiển thị
+        </div>
+        <div class="setting-row">
+          <span>Cỡ chữ phụ đề</span>
+          <input type="range" id="font-size-slider" min="13" max="22" value="15" class="slider" />
+          <span id="font-size-val">15px</span>
+        </div>
+        <div class="setting-row">
+          <span>Độ trong suốt kính</span>
+          <input type="range" id="opacity-slider" min="60" max="100" value="92" class="slider" />
+          <span id="opacity-val">92%</span>
+        </div>
+      </div>
+
+      <!-- Realtime History -->
+      <div class="source-section history-section">
+        <div class="section-label">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/>
+          </svg>
+          Lịch sử dịch phụ đề
+        </div>
+        <div class="history-list" id="history-list">
+          <div class="history-empty">Chưa có bản dịch nào...</div>
+        </div>
+        <button class="clear-btn" id="btn-clear-history">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+          </svg>
+          Xóa lịch sử
+        </button>
+      </div>
+    </aside>
+
+    <!-- === CENTER: Smartphone Screen Simulator === -->
+    <main class="phone-simulator-wrapper">
+      <div class="phone-frame">
+        <!-- Dynamic Island Header -->
+        <div class="phone-notch">
+          <div class="notch-time">14:45</div>
+          <div class="notch-island">
+            <div class="island-mic-icon">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+              </svg>
+            </div>
+            <div class="notch-dot live-indicator" id="live-dot"></div>
+          </div>
+          <div class="notch-icons">
+            <svg width="15" height="11" viewBox="0 0 24 18" fill="currentColor"><path d="M1 14h3v4H1zm5-4h3v8H6zm5-5h3v13h-3zm5-5h3v18h-3z"/></svg>
+            <svg width="15" height="11" viewBox="0 0 24 18" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="18" height="12" rx="2"/><line x1="22" x2="22" y1="8" y2="12"/></svg>
+          </div>
+        </div>
+
+        <!-- Simulated Mobile App Background (e.g. YouTube / Streaming video) -->
+        <div class="phone-screen">
+          <div class="bg-app-header">
+            <div class="app-logo-badge">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+              <span>Global Broadcast Media</span>
+            </div>
+            <div class="live-badge">LIVE</div>
+          </div>
+
+          <div class="bg-app-content">
+            <div class="news-video-thumb">
+              <div class="play-ring">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                  <polygon points="6 4 20 12 6 20 6 4"/>
+                </svg>
+              </div>
+              <div class="video-label">English Documentary Audio Stream</div>
+            </div>
+            <div class="news-text-area">
+              <div class="news-headline">Deep Learning models breaking boundaries in zero-shot multilingual speech understanding...</div>
+              <div class="news-body">Modern on-device acoustic models are eliminating latency, rendering live subtitles directly atop user interfaces with unprecedented precision...</div>
+            </div>
+          </div>
+
+          <!-- ===== PROFESSIONAL FLOATING OVERLAY WIDGET ===== -->
+          <div class="floating-widget" id="floating-widget">
+            <!-- Header handle -->
+            <div class="widget-header" id="widget-drag-handle">
+              <div class="widget-brand">
+                <div class="widget-dot"></div>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M5 8l6 6"/>
+                  <path d="M4 14l6-6 2-3"/>
+                  <path d="M2 5h12"/>
+                  <path d="M7 2h1"/>
+                  <path d="M22 22l-5-10-5 10"/>
+                  <path d="M14 18h6"/>
+                </svg>
+                <span>Live Subtitles</span>
+              </div>
+              <div class="widget-controls">
+                <button class="widget-btn" id="widget-swap-btn" title="Đảo chiều">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M7 16V4m0 0L3 8m4-4l4 4"/><path d="M17 8v12m0 0l4-4m-4 4l-4-4"/></svg>
+                </button>
+                <button class="widget-btn" id="widget-minimize-btn" title="Thu nhỏ">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="5" x2="19" y1="12" y2="12"/></svg>
+                </button>
+                <button class="widget-btn widget-close-btn" id="widget-close-btn" title="Đóng">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Double-Line Real-Time Translation Stream -->
+            <div class="widget-body" id="widget-body">
+              <!-- TOP ROW: Original Source Audio Text -->
+              <div class="transcript-row original-row">
+                <div class="row-lang-tag" id="original-tag">EN</div>
+                <div class="transcript-text original-text" id="original-text">
+                  <span class="placeholder-text">Đang chờ âm thanh thiết bị...</span>
+                </div>
+                <div class="typing-cursor" id="typing-cursor-1"></div>
+              </div>
+
+              <div class="divider-line"></div>
+
+              <!-- BOTTOM ROW: Instant Translation Text -->
+              <div class="transcript-row translated-row">
+                <div class="row-lang-tag" id="translated-tag">VI</div>
+                <div class="transcript-text translated-text" id="translated-text">
+                  <span class="placeholder-text">Bản dịch sát nghĩa xuất hiện tại đây...</span>
+                </div>
+                <div class="typing-cursor" id="typing-cursor-2"></div>
+              </div>
+            </div>
+
+            <!-- Waveform Frequency Monitor -->
+            <div class="widget-visualizer" id="widget-visualizer">
+              <div class="viz-bar" id="viz-1"></div>
+              <div class="viz-bar" id="viz-2"></div>
+              <div class="viz-bar" id="viz-3"></div>
+              <div class="viz-bar" id="viz-4"></div>
+              <div class="viz-bar" id="viz-5"></div>
+              <div class="viz-bar" id="viz-6"></div>
+              <div class="viz-bar" id="viz-7"></div>
+              <div class="viz-bar" id="viz-8"></div>
+            </div>
+          </div>
+
+          <!-- Professional Floating Bubble (when minimized) -->
+          <div class="floating-bubble hidden" id="floating-bubble">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+              <line x1="12" x2="12" y1="19" y2="22"/>
+            </svg>
+            <div class="bubble-pulse"></div>
+          </div>
+        </div>
+
+        <div class="phone-home-bar"></div>
+      </div>
+
+      <div class="phone-label">Giao diện màn hình di động Android (Live Overlay)</div>
+    </main>
+
+    <!-- === RIGHT: Diagnostics & Info Panel === -->
+    <aside class="info-panel glass-panel">
+      <div class="info-title">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>
+        Chỉ số hiệu năng phiên
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="stat-num" id="stat-words">0</div>
+          <div class="stat-lbl">Từ nhận dạng</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" id="stat-sentences">0</div>
+          <div class="stat-lbl">Câu đã dịch</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" id="stat-latency">—</div>
+          <div class="stat-lbl">Độ trễ xử lý</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" id="stat-accuracy">—</div>
+          <div class="stat-lbl">Độ chuẩn xác</div>
+        </div>
+      </div>
+
+      <div class="info-divider"></div>
+
+      <div class="info-title">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+        Đặc tả kỹ thuật Android APK
+      </div>
+      <ul class="feature-list">
+        <li><span class="feat-bullet"></span><span><strong>Overlay Window:</strong> Type <code>APPLICATION_OVERLAY</code> vẽ đè lên tất cả ứng dụng.</span></li>
+        <li><span class="feat-bullet"></span><span><strong>Internal Audio:</strong> Thu âm thanh hệ thống qua <code>AudioPlaybackCapture</code> (Android 10+).</span></li>
+        <li><span class="feat-bullet"></span><span><strong>Offline Engine:</strong> Google ML Kit Translation On-Device không phụ thuộc mạng.</span></li>
+        <li><span class="feat-bullet"></span><span><strong>Real-Time Pipeline:</strong> Nhận dạng từ luồng PCM 16kHz song song dịch tức thì.</span></li>
+        <li><span class="feat-bullet"></span><span><strong>Background Daemon:</strong> Foreground Service với thông báo hệ thống liên tục.</span></li>
+      </ul>
+
+      <div class="info-divider"></div>
+
+      <div class="info-title">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>
+        Thao tác phím tắt nhanh
+      </div>
+      <div class="shortcut-list">
+        <div class="shortcut-row"><span class="kbd">Space</span> <span>Bật / Dừng dịch</span></div>
+        <div class="shortcut-row"><span class="kbd">S</span> <span>Đảo chiều EN ⇄ VI</span></div>
+        <div class="shortcut-row"><span class="kbd">M</span> <span>Thu nhỏ thành bong bóng</span></div>
+      </div>
+    </aside>
+
+  </div>
+
+  <!-- Toast notification -->
+  <div class="toast" id="toast"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
