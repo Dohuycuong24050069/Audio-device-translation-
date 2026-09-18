@@ -17,3 +17,6 @@ captures/
 
 # Build cache
 .cxx/
+
+*.apk
+
