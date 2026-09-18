@@ -1,8 +1,14 @@
 # 🎙️ LiveAudio Realtime Translator (100% Offline Android App)
 
+[![GitHub Release](https://img.shields.io/github/v/release/Dohuycuong24050069/Audio-device-translation-?color=brightgreen&label=Latest%20Release)](https://github.com/Dohuycuong24050069/Audio-device-translation-/releases/latest)
+[![Platform Android](https://img.shields.io/badge/Platform-Android%2010%2B-blue.svg)](https://developer.android.com)
+[![Offline AI](https://img.shields.io/badge/AI-Vosk%20Offline-orange.svg)](https://alphacephei.com/vosk/)
+
 A high-performance Android application for **Real-Time Internal Device Audio & Microphone Translation** featuring an interactive **Floating Overlay Subtitle Window** that renders over any application (YouTube, TikTok, Netflix, Games, Reels, etc.).
 
 Powered by **Vosk Offline Speech-to-Text (STT)** and **Google ML Kit On-Device Translation** — **100% Free Forever, No API Keys Required, and Fully Private**.
+
+> 📥 **Direct APK Download**: **[LiveAudioTranslator_Vosk_Offline.apk (v1.0.0)](https://github.com/Dohuycuong24050069/Audio-device-translation-/releases/download/v1.0.0/LiveAudioTranslator_Vosk_Offline.apk)** (~145 MB, Ready to install on Android).
 
 ---
 
