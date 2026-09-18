@@ -12,6 +12,7 @@ import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioPlaybackCaptureConfiguration
 import android.media.AudioRecord
+import android.media.MediaRecorder
 import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
 import android.os.Build
@@ -23,19 +24,40 @@ import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.util.Log
-import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import org.vosk.Model
+import org.vosk.Recognizer
+import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import java.util.Locale
 
 /**
  * AudioCaptureService - Dịch âm thanh thiết bị và micro thời gian thực
- * Tương thích hoàn toàn Android 10 đến Android 14/15
+ *
+ * =====================================================================
+ * ĐỘNG CƠ NHẬN DẠNG:
+ *   Vosk Offline AI (vosk-model-small-en-us-0.15)
+ *   - 100% Offline, không tốn chi phí, không cần API Key, không giới hạn.
+ *   - Nhận diện trực tiếp từ luồng sóng âm PCM 16kHz của AudioRecord.
+ *   - Trả về kết quả Realtime (partial) và câu hoàn chỉnh (final).
+ *
+ * ĐỘNG CƠ DỊCH THUẬT:
+ *   Google ML Kit On-Device Translation (Offline 100%).
+ * =====================================================================
+ *
+ * Hỗ trợ Android 10 đến Android 14/15
  */
 class AudioCaptureService : Service() {
 
@@ -46,10 +68,19 @@ class AudioCaptureService : Service() {
     private var translationEngine: TranslationEngine? = null
     private var speechRecognizer: SpeechRecognizer? = null
     private var audioRecord: AudioRecord? = null
+    private var captureJob: Job? = null
+
+    // Vosk Engine
+    private var voskModel: Model? = null
+    private var voskRecognizer: Recognizer? = null
+    private var isVoskReady = false
+    private var isInitializingVosk = false
 
     private var srcLang = "en"
     private var tgtLang = "vi"
     private var isSystemAudio = false
+
+    private val SAMPLE_RATE = 16000
 
     companion object {
         const val ACTION_START = "ACTION_START"
@@ -71,26 +102,122 @@ class AudioCaptureService : Service() {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
-        startForegroundWithProperTypes()
+        startForegroundSafe(hasMediaProjection = false)
         try {
             translationEngine = TranslationEngine(this)
         } catch (e: Exception) {
             Log.e(TAG, "Lỗi khởi tạo TranslationEngine: ${e.message}")
         }
+        initVoskModel()
     }
 
-    private fun startForegroundWithProperTypes() {
+    private fun initVoskModel() {
+        if (isVoskReady || isInitializingVosk) return
+        isInitializingVosk = true
+        Log.d(TAG, "Đang khởi tạo Vosk Offline AI Model...")
+
+        serviceScope.launch(Dispatchers.IO) {
+            try {
+                val modelDir = File(filesDir, "vosk-model-en")
+                val markerFile = File(modelDir, ".ready")
+                val finalMdl = File(modelDir, "am/final.mdl")
+
+                if (!markerFile.exists() || !finalMdl.exists() || finalMdl.length() < 1000000L) {
+                    withContext(Dispatchers.Main) {
+                        FloatingOverlayService.updateSubtitles(
+                            "Đang nạp mô hình AI Vosk (lần đầu)...",
+                            "Vui lòng chờ khoảng 3-5 giây"
+                        )
+                    }
+
+                    if (modelDir.exists()) modelDir.deleteRecursively()
+                    modelDir.mkdirs()
+
+                    val modelFiles = listOf(
+                        "am/final.mdl",
+                        "conf/mfcc.conf",
+                        "conf/model.conf",
+                        "graph/disambig_tid.int",
+                        "graph/Gr.fst",
+                        "graph/HCLr.fst",
+                        "graph/phones/word_boundary.int",
+                        "ivector/final.dubm",
+                        "ivector/final.ie",
+                        "ivector/final.mat",
+                        "ivector/global_cmvn.stats",
+                        "ivector/online_cmvn.conf",
+                        "ivector/splice.conf",
+                        "README"
+                    )
+
+                    for ((index, relPath) in modelFiles.withIndex()) {
+                        val outFile = File(modelDir, relPath)
+                        outFile.parentFile?.mkdirs()
+                        assets.open("model-en-us/$relPath").use { input ->
+                            FileOutputStream(outFile).use { output ->
+                                input.copyTo(output)
+                            }
+                        }
+                        val percent = ((index + 1) * 100) / modelFiles.size
+                        withContext(Dispatchers.Main) {
+                            FloatingOverlayService.updateSubtitles(
+                                "Đang chuẩn bị mô hình AI: $percent%",
+                                "Chỉ cần giải nén 1 lần duy nhất"
+                            )
+                        }
+                    }
+
+                    markerFile.createNewFile()
+                }
+
+                withContext(Dispatchers.Main) {
+                    FloatingOverlayService.updateSubtitles(
+                        "Đang khởi động Vosk Engine...",
+                        "Chuẩn bị hoàn tất..."
+                    )
+                }
+
+                voskModel = Model(modelDir.absolutePath)
+                voskRecognizer = Recognizer(voskModel, SAMPLE_RATE.toFloat())
+                isVoskReady = true
+                isInitializingVosk = false
+                Log.d(TAG, "✅ Vosk Offline Model đã sẵn sàng từ ${modelDir.absolutePath}!")
+
+                withContext(Dispatchers.Main) {
+                    FloatingOverlayService.updateSubtitles(
+                        "Vosk AI Offline đã sẵn sàng",
+                        "Đang lắng nghe âm thanh thiết bị/micro..."
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Lỗi giải nén/nạp Vosk Model: ${e.message}", e)
+                isInitializingVosk = false
+                withContext(Dispatchers.Main) {
+                    FloatingOverlayService.updateSubtitles(
+                        "Lỗi nạp Vosk AI: ${e.localizedMessage}",
+                        "Vui lòng thử khởi động lại ứng dụng"
+                    )
+                }
+            }
+        }
+    }
+
+    private fun startForegroundSafe(hasMediaProjection: Boolean) {
         val notification = buildNotification()
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                val serviceType = ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION or
-                        ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+                val serviceType = if (hasMediaProjection) {
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION or
+                            ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+                } else {
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+                }
                 startForeground(NOTIFICATION_ID, notification, serviceType)
             } else {
                 startForeground(NOTIFICATION_ID, notification)
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Lỗi startForeground với types: ${e.message}, fallback standard")
+            Log.e(TAG, "Lỗi startForeground: ${e.message}, fallback standard")
             try {
                 startForeground(NOTIFICATION_ID, notification)
             } catch (e2: Exception) {
@@ -117,7 +244,7 @@ class AudioCaptureService : Service() {
                     initMediaProjectionSafe(resultCode, resultData)
                 } else {
                     isSystemAudio = false
-                    startMicrophoneRecognition()
+                    startMicRecognition()
                 }
             }
 
@@ -129,14 +256,19 @@ class AudioCaptureService : Service() {
 
             ACTION_USE_SYSTEM_AUDIO -> {
                 isSystemAudio = true
+                stopMicRecognition()
                 if (mediaProjection != null) {
                     startSystemAudioCapture()
+                } else {
+                    Log.w(TAG, "Chưa có MediaProjection, không thể chuyển sang system audio")
                 }
             }
 
             ACTION_USE_MIC -> {
                 isSystemAudio = false
-                startMicrophoneRecognition()
+                stopCaptureLoop()
+                stopAudioRecord()
+                startMicRecognition()
             }
         }
 
@@ -150,72 +282,207 @@ class AudioCaptureService : Service() {
         try {
             val projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as? MediaProjectionManager
             if (projectionManager == null) {
-                startMicrophoneRecognition()
+                startMicRecognition()
                 return
             }
 
             mediaProjection = projectionManager.getMediaProjection(resultCode, resultData)
 
-            // BẮT BUỘC TRÊN ANDROID 14: Phải đăng ký callback trước khi dùng, nếu không sẽ crash IllegalStateException!
+            // Android 14: Cập nhật Foreground Service với MEDIA_PROJECTION sau khi đã có quyền
+            startForegroundSafe(hasMediaProjection = true)
+
+            // BẮT BUỘC TRÊN ANDROID 14: Đăng ký callback trước khi dùng
             mediaProjection?.registerCallback(object : MediaProjection.Callback() {
                 override fun onStop() {
                     Log.d(TAG, "MediaProjection đã dừng")
                     stopAudioRecord()
                     mediaProjection = null
+                    startForegroundSafe(hasMediaProjection = false)
                 }
             }, Handler(Looper.getMainLooper()))
 
             isSystemAudio = true
             startSystemAudioCapture()
-        } catch (e: SecurityException) {
-            Log.e(TAG, "Lỗi bảo mật Android 14 MediaProjection: ${e.message}, fallback micro", e)
-            isSystemAudio = false
-            startMicrophoneRecognition()
         } catch (e: Exception) {
             Log.e(TAG, "Lỗi khởi động MediaProjection: ${e.message}, fallback micro", e)
             isSystemAudio = false
-            startMicrophoneRecognition()
+            startMicRecognition()
+        }
+    }
+
+    // ===================== SYSTEM AUDIO PIPELINE ========================
+
+    /**
+     * Thu âm thanh nội bộ thiết bị (Internal Audio) qua Android 10+ AudioPlaybackCapture
+     * và đưa trực tiếp vào Vosk Recognizer.
+     */
+    private fun startSystemAudioCapture() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || mediaProjection == null) {
+            Log.w(TAG, "System audio yêu cầu Android 10+ và MediaProjection, fallback micro")
+            startMicRecognition()
+            return
+        }
+
+        stopCaptureLoop()
+        stopAudioRecord()
+
+        try {
+            val config = AudioPlaybackCaptureConfiguration.Builder(mediaProjection!!)
+                .addMatchingUsage(AudioAttributes.USAGE_MEDIA)
+                .addMatchingUsage(AudioAttributes.USAGE_GAME)
+                .addMatchingUsage(AudioAttributes.USAGE_UNKNOWN)
+                .build()
+
+            val audioFormat = AudioFormat.Builder()
+                .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                .setSampleRate(SAMPLE_RATE)
+                .setChannelMask(AudioFormat.CHANNEL_IN_MONO)
+                .build()
+
+            val minBuffer = AudioRecord.getMinBufferSize(
+                SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT
+            )
+            val bufferSize = maxOf(minBuffer * 4, 8192)
+
+            audioRecord = AudioRecord.Builder()
+                .setAudioPlaybackCaptureConfig(config)
+                .setAudioFormat(audioFormat)
+                .setBufferSizeInBytes(bufferSize)
+                .build()
+
+            if (audioRecord?.state != AudioRecord.STATE_INITIALIZED) {
+                Log.e(TAG, "AudioRecord không khởi tạo được, fallback micro")
+                audioRecord?.release()
+                audioRecord = null
+                startMicRecognition()
+                return
+            }
+
+            audioRecord!!.startRecording()
+            Log.d(TAG, "✅ Bắt đầu thu âm thanh hệ thống (${SAMPLE_RATE}Hz mono PCM16) qua Vosk")
+
+            captureJob = serviceScope.launch(Dispatchers.IO) {
+                runVoskAudioLoop(bufferSize)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Lỗi tạo AudioRecord hệ thống: ${e.message}, fallback micro", e)
+            startMicRecognition()
         }
     }
 
     /**
-     * Thu âm thanh nội bộ thiết bị (Internal Audio) qua Android 10+ AudioPlaybackCapture
+     * Thu âm thanh từ Microphone và đưa vào Vosk Recognizer (hoặc SpeechRecognizer cho tiếng Việt)
      */
-    private fun startSystemAudioCapture() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && mediaProjection != null) {
+    private fun startMicRecognition() {
+        stopCaptureLoop()
+        stopAudioRecord()
+
+        if (srcLang.startsWith("en", ignoreCase = true)) {
+            // Khi nguồn là tiếng Anh: Dùng AudioRecord Mic đưa vào Vosk (100% Offline)
             try {
-                val config = AudioPlaybackCaptureConfiguration.Builder(mediaProjection!!)
-                    .addMatchingUsage(AudioAttributes.USAGE_MEDIA)
-                    .addMatchingUsage(AudioAttributes.USAGE_GAME)
-                    .addMatchingUsage(AudioAttributes.USAGE_UNKNOWN)
-                    .build()
+                val minBuffer = AudioRecord.getMinBufferSize(
+                    SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT
+                )
+                val bufferSize = maxOf(minBuffer * 4, 8192)
 
-                val audioFormat = AudioFormat.Builder()
-                    .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                    .setSampleRate(16000)
-                    .setChannelMask(AudioFormat.CHANNEL_IN_MONO)
-                    .build()
+                audioRecord = AudioRecord(
+                    MediaRecorder.AudioSource.MIC,
+                    SAMPLE_RATE,
+                    AudioFormat.CHANNEL_IN_MONO,
+                    AudioFormat.ENCODING_PCM_16BIT,
+                    bufferSize
+                )
 
-                val bufferSize = AudioRecord.getMinBufferSize(16000, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
-                if (bufferSize > 0) {
-                    audioRecord = AudioRecord.Builder()
-                        .setAudioPlaybackCaptureConfig(config)
-                        .setAudioFormat(audioFormat)
-                        .setBufferSizeInBytes(bufferSize * 2)
-                        .build()
-
-                    if (audioRecord?.state == AudioRecord.STATE_INITIALIZED) {
-                        audioRecord?.startRecording()
-                        Log.d(TAG, "Bắt đầu thu âm thanh hệ thống thành công")
+                if (audioRecord?.state == AudioRecord.STATE_INITIALIZED) {
+                    audioRecord?.startRecording()
+                    Log.d(TAG, "✅ Đang thu Micro qua Vosk AI Offline")
+                    captureJob = serviceScope.launch(Dispatchers.IO) {
+                        runVoskAudioLoop(bufferSize)
                     }
+                    return
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Lỗi AudioRecord hệ thống: ${e.message}", e)
+                Log.e(TAG, "Lỗi AudioRecord Mic: ${e.message}")
             }
         }
 
-        // Song song nhận diện giọng nói
-        startMicrophoneRecognition()
+        // Fallback sang Android SpeechRecognizer (hỗ trợ tiếng Việt tốt)
+        startAndroidSpeechRecognizer()
+    }
+
+    /**
+     * Vòng lặp đọc âm thanh PCM trực tiếp và nạp vào Vosk Recognizer
+     */
+    /**
+     * Vòng lặp đọc âm thanh PCM trực tiếp và nạp vào Vosk Recognizer.
+     * Tối ưu hóa độ trễ siêu thấp: đọc chunk 1280 mẫu (80ms tại 16kHz)
+     * và tái sử dụng bộ đệm bộ nhớ (0ms GC pause).
+     */
+    private suspend fun runVoskAudioLoop(bufferSize: Int) {
+        val chunkSize = 800 // 50ms tại 16kHz (nhận diện tức thời, giảm độ trễ tối đa)
+        val readBuffer = ShortArray(chunkSize)
+        val pcmBytes = ByteArray(chunkSize * 2)
+        Log.d(TAG, "🔄 Bắt đầu vòng lặp Vosk PCM siêu tốc (50ms latency)")
+
+        while (serviceScope.isActive && audioRecord?.recordingState == AudioRecord.RECORDSTATE_RECORDING) {
+            val shortsRead = audioRecord?.read(readBuffer, 0, chunkSize) ?: -1
+            if (shortsRead <= 0) {
+                delay(5)
+                continue
+            }
+
+            val recognizer = voskRecognizer
+            if (recognizer == null || !isVoskReady) {
+                delay(20)
+                continue
+            }
+
+            // Chuyển ShortArray sang Little-Endian ByteArray với mảng cấp phát sẵn (0ms GC)
+            var byteIdx = 0
+            for (i in 0 until shortsRead) {
+                val s = readBuffer[i].toInt()
+                pcmBytes[byteIdx++] = (s and 0xFF).toByte()
+                pcmBytes[byteIdx++] = ((s shr 8) and 0xFF).toByte()
+            }
+
+            val byteLen = shortsRead * 2
+            if (recognizer.acceptWaveForm(pcmBytes, byteLen)) {
+                val resultJson = recognizer.result
+                val text = parseVoskText(resultJson)
+                if (text.isNotBlank()) {
+                    Log.d(TAG, "Vosk Result: $text")
+                    handleRecognizedText(text, isFinal = true)
+                }
+            } else {
+                val partialJson = recognizer.partialResult
+                val partial = parseVoskPartial(partialJson)
+                if (partial.isNotBlank()) {
+                    handleRecognizedText(partial, isFinal = false)
+                }
+            }
+        }
+        Log.d(TAG, "🛑 Kết thúc vòng lặp Vosk PCM")
+    }
+
+    private fun parseVoskText(jsonStr: String): String {
+        return try {
+            JSONObject(jsonStr).optString("text", "").trim()
+        } catch (e: Exception) {
+            ""
+        }
+    }
+
+    private fun parseVoskPartial(jsonStr: String): String {
+        return try {
+            JSONObject(jsonStr).optString("partial", "").trim()
+        } catch (e: Exception) {
+            ""
+        }
+    }
+
+    private fun stopCaptureLoop() {
+        captureJob?.cancel()
+        captureJob = null
     }
 
     private fun stopAudioRecord() {
@@ -228,12 +495,11 @@ class AudioCaptureService : Service() {
         }
     }
 
-    /**
-     * Nhận dạng giọng nói liên tục (STT)
-     */
-    private fun startMicrophoneRecognition() {
+    // ===================== ANDROID SPEECH RECOGNIZER =====================
+
+    private fun startAndroidSpeechRecognizer() {
         if (!SpeechRecognizer.isRecognitionAvailable(this)) {
-            Log.e(TAG, "SpeechRecognizer không khả dụng trên thiết bị này")
+            Log.e(TAG, "SpeechRecognizer không khả dụng trên thiết bị")
             return
         }
 
@@ -248,9 +514,8 @@ class AudioCaptureService : Service() {
                     override fun onEndOfSpeech() {}
 
                     override fun onError(error: Int) {
-                        Log.w(TAG, "Speech error code: $error")
                         serviceScope.launch {
-                            delay(600)
+                            delay(350)
                             startListeningIntent()
                         }
                     }
@@ -261,7 +526,10 @@ class AudioCaptureService : Service() {
                             val text = matches[0]
                             handleRecognizedText(text, isFinal = true)
                         }
-                        startListeningIntent()
+                        serviceScope.launch {
+                            delay(150)
+                            startListeningIntent()
+                        }
                     }
 
                     override fun onPartialResults(partialResults: Bundle?) {
@@ -297,34 +565,53 @@ class AudioCaptureService : Service() {
         }
     }
 
-    private fun restartRecognition() {
+    private fun stopMicRecognition() {
         try {
             speechRecognizer?.stopListening()
-            startListeningIntent()
+            speechRecognizer?.destroy()
+            speechRecognizer = null
         } catch (e: Exception) {
-            Log.e(TAG, "Lỗi restart: ${e.message}")
+            Log.e(TAG, "Lỗi dừng SpeechRecognizer: ${e.message}")
         }
     }
 
+    private fun restartRecognition() {
+        if (isSystemAudio) {
+            Log.d(TAG, "Cập nhật ngôn ngữ system audio: $srcLang → $tgtLang")
+        } else {
+            startMicRecognition()
+        }
+    }
+
+    private var lastTranslatedTime = 0L
+    private var lastPartialTranslated = ""
+
     /**
      * Xử lý đoạn văn bản vừa nhận diện được:
-     * Dịch và gửi sang FloatingOverlayService
+     * Dịch và hiển thị lên FloatingOverlayService theo thời gian thực
      */
     private fun handleRecognizedText(originalText: String, isFinal: Boolean) {
         serviceScope.launch {
             try {
-                val translatedText = if (isFinal) {
-                    translationEngine?.translate(originalText, srcLang, tgtLang) ?: ""
+                var translatedText: String? = null
+                val now = System.currentTimeMillis()
+
+                if (isFinal) {
+                    translatedText = translationEngine?.translate(originalText, srcLang, tgtLang)
+                    lastPartialTranslated = ""
                 } else {
-                    "..."
+                    // Dịch phụ đề ngay cả khi đang nói (nếu cách lần dịch trước ít nhất 200ms hoặc từ mới xuất hiện)
+                    if (originalText != lastPartialTranslated && (now - lastTranslatedTime > 200 || originalText.length > lastPartialTranslated.length + 5)) {
+                        lastTranslatedTime = now
+                        lastPartialTranslated = originalText
+                        translatedText = translationEngine?.translate(originalText, srcLang, tgtLang)
+                    }
                 }
 
-                val intent = Intent(this@AudioCaptureService, FloatingOverlayService::class.java).apply {
-                    action = FloatingOverlayService.ACTION_UPDATE_TEXT
-                    putExtra(FloatingOverlayService.EXTRA_ORIGINAL_TEXT, originalText)
-                    putExtra(FloatingOverlayService.EXTRA_TRANSLATED_TEXT, translatedText)
+                // Cập nhật trực tiếp lên cửa sổ nổi nếu đang mở
+                if (FloatingOverlayService.instance != null) {
+                    FloatingOverlayService.updateSubtitles(originalText, translatedText)
                 }
-                startService(intent)
             } catch (e: Exception) {
                 Log.e(TAG, "Lỗi xử lý dịch: ${e.message}")
             }
@@ -335,7 +622,7 @@ class AudioCaptureService : Service() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "Thu Âm Thanh Dịch Thuật",
+                "Thu Âm Thanh Dịch Thuật (Vosk AI)",
                 NotificationManager.IMPORTANCE_LOW
             )
             val manager = getSystemService(NotificationManager::class.java)
@@ -345,9 +632,9 @@ class AudioCaptureService : Service() {
 
     private fun buildNotification(): Notification {
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Realtime Translator")
-            .setContentText("Đang dịch âm thanh thiết bị & micro real-time")
-            .setSmallIcon(R.drawable.bg_bubble)
+            .setContentTitle("Realtime Translator (Vosk AI)")
+            .setContentText("Đang dịch âm thanh thiết bị & micro 100% Offline")
+            .setSmallIcon(R.drawable.ic_notification)
             .setOngoing(true)
             .build()
     }
@@ -355,9 +642,11 @@ class AudioCaptureService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         try {
-            speechRecognizer?.destroy()
-            translationEngine?.close()
+            stopMicRecognition()
+            stopCaptureLoop()
             stopAudioRecord()
+            voskRecognizer?.close()
+            translationEngine?.close()
             mediaProjection?.stop()
         } catch (e: Exception) {
             Log.e(TAG, "Lỗi onDestroy: ${e.message}")

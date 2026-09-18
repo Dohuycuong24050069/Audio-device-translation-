@@ -68,6 +68,10 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-service:2.7.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
 
+    // Vosk Offline Speech Recognition
+    implementation("com.alphacephei:vosk-android:0.3.75@aar")
+    implementation("net.java.dev.jna:jna:5.13.0@aar")
+
     // Activity Result API
     implementation("androidx.activity:activity-ktx:1.8.2")
 }

@@ -75,6 +75,11 @@ class MainActivity : AppCompatActivity() {
         updateUI()
     }
 
+    override fun onResume() {
+        super.onResume()
+        updateUI()
+    }
+
     private fun setupUI() {
         // Nút bật/tắt dịch
         binding.btnToggleService.setOnClickListener {
@@ -141,11 +146,16 @@ class MainActivity : AppCompatActivity() {
             // 1. Quyền vẽ cửa sổ nổi
             !Settings.canDrawOverlays(this) -> {
                 Toast.makeText(this, "Vui lòng cho phép 'Hiển thị trên ứng dụng khác'", Toast.LENGTH_LONG).show()
-                val intent = Intent(
-                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                    Uri.parse("package:$packageName")
-                )
-                overlayPermissionLauncher.launch(intent)
+                try {
+                    val intent = Intent(
+                        Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                        Uri.parse("package:$packageName")
+                    )
+                    overlayPermissionLauncher.launch(intent)
+                } catch (e: Exception) {
+                    val fallbackIntent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
+                    overlayPermissionLauncher.launch(fallbackIntent)
+                }
             }
             // 2. Quyền Micro
             ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
@@ -200,9 +210,20 @@ class MainActivity : AppCompatActivity() {
                 putExtra(FloatingOverlayService.EXTRA_SRC_LANG, sourceLanguage)
                 putExtra(FloatingOverlayService.EXTRA_TGT_LANG, targetLanguage)
             }
-            ContextCompat.startForegroundService(this, overlayIntent)
+            try {
+                startService(overlayIntent)
+            } catch (e: Exception) {
+                ContextCompat.startForegroundService(this, overlayIntent)
+            }
+            isServiceRunning = true
+            updateUI()
+            Toast.makeText(this, "✅ Đang khởi động cửa sổ dịch nổi...", Toast.LENGTH_SHORT).show()
+            if (isXiaomiDevice()) {
+                Toast.makeText(this, "💡 Xiaomi/Redmi: Nhớ bật 'Hiển thị cửa sổ pop-up khi chạy dưới nền' trong Cài đặt app!", Toast.LENGTH_LONG).show()
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Lỗi bật FloatingOverlayService: ${e.message}")
+            Toast.makeText(this, "Lỗi khởi động khung nổi: ${e.message}", Toast.LENGTH_LONG).show()
         }
 
         // 2. Bật dịch âm thanh thiết bị (MediaProjection) hoặc Microphone
@@ -217,6 +238,11 @@ class MainActivity : AppCompatActivity() {
         } else {
             startMicTranslationService()
         }
+    }
+
+    private fun isXiaomiDevice(): Boolean {
+        val m = Build.MANUFACTURER?.lowercase(java.util.Locale.ROOT) ?: ""
+        return m.contains("xiaomi") || m.contains("redmi") || m.contains("poco")
     }
 
     private fun startMicTranslationService() {

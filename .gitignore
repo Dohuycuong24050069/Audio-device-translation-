@@ -1,9 +1,9 @@
 # Android & Gradle
-.gradle/
-build/
-app/build/
+**/.gradle/
+**/build/
+**/.cxx/
 *.iml
-.idea/
+**/.idea/
 local.properties
 .DS_Store
 
@@ -15,8 +15,6 @@ captures/
 *.jks
 *.keystore
 
-# Build cache
-.cxx/
-
+# APK binaries (built on demand)
 *.apk
-
+**/*.apk

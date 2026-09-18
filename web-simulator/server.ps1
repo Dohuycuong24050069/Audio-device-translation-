@@ -3,7 +3,7 @@ $listener.Prefixes.Add('http://localhost:8080/')
 $listener.Start()
 Write-Host "Server started at http://localhost:8080/"
 
-$baseDir = "C:\Users\Admin\.gemini\antigravity-ide\scratch\realtime-translator\web-simulator"
+$baseDir = "C:\Users\RDP\Downloads\Audio-device-translation--main\Audio-device-translation--main\web-simulator"
 
 while ($listener.IsListening) {
     try {

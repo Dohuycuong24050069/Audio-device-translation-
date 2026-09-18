@@ -32,12 +32,15 @@ class FloatingOverlayService : Service() {
     private var floatingView: View? = null
     private var bubbleView: View? = null
     private var params: WindowManager.LayoutParams? = null
+    private var bubbleParams: WindowManager.LayoutParams? = null  // params riêng cho bubble
 
     private var tvOriginal: TextView? = null
     private var tvTranslated: TextView? = null
     private var tvOriginalTag: TextView? = null
     private var tvTranslatedTag: TextView? = null
-
+    private var isOverlayAdded = false
+    private var isBubbleAdded = false
+    private var currentSizeLevel = 1 // 0: Nhỏ, 1: Vừa, 2: Lớn
     private var srcLang = "en"
     private var tgtLang = "vi"
 
@@ -56,44 +59,66 @@ class FloatingOverlayService : Service() {
 
         private const val CHANNEL_ID = "FloatingOverlayChannel"
         private const val NOTIFICATION_ID = 101
+
+        // In-memory direct listener để cập nhật văn bản cực nhanh, không qua Intent IPC
+        var instance: FloatingOverlayService? = null
+            private set
+
+        fun updateSubtitles(orig: String, trans: String?) {
+            instance?.let { service ->
+                service.tvOriginal?.post {
+                    if (orig.isNotEmpty()) service.tvOriginal?.text = orig
+                    if (!trans.isNullOrEmpty()) service.tvTranslated?.text = trans
+                }
+            }
+        }
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
         super.onCreate()
+        instance = this
         createNotificationChannel()
         startForegroundSafe()
-        initOverlay()
+        // Không gọi initOverlay ở onCreate để tránh tạo 2 lần với onStartCommand
     }
 
     private fun startForegroundSafe() {
-        val notification = buildNotification()
         try {
+            val notification = buildNotification()
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
                 startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
             } else {
                 startForeground(NOTIFICATION_ID, notification)
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Lỗi startForeground: ${e.message}, thử startForeground cơ bản")
-            try {
-                startForeground(NOTIFICATION_ID, notification)
-            } catch (e2: Exception) {
-                Log.e(TAG, "Lỗi startForeground cơ bản: ${e2.message}")
-            }
+            Log.w(TAG, "FloatingOverlayService hoạt động ở chế độ service tiêu chuẩn: ${e.message}")
         }
     }
 
     private fun initOverlay() {
         if (!Settings.canDrawOverlays(this)) {
             Log.e(TAG, "Chưa cấp quyền SYSTEM_ALERT_WINDOW (Hiển thị trên ứng dụng khác)")
+            android.os.Handler(android.os.Looper.getMainLooper()).post {
+                android.widget.Toast.makeText(this, "⚠️ Cần cấp quyền 'Hiển thị trên ứng dụng khác'!", android.widget.Toast.LENGTH_LONG).show()
+            }
+            return
+        }
+
+        // Tuyệt đối chỉ tạo 1 lần duy nhất, nếu đã có thì chỉ bật lại VISIBLE
+        if (isOverlayAdded && floatingView != null) {
+            floatingView?.visibility = View.VISIBLE
+            bubbleView?.visibility = View.GONE
             return
         }
 
         try {
+            isOverlayAdded = true
             windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
-            val inflater = LayoutInflater.from(this)
+            // BẮT BUỘC: Dùng ContextThemeWrapper để không bị crash Theme / Attribute khi inflate trong Service
+            val themedContext = androidx.appcompat.view.ContextThemeWrapper(this, R.style.Theme_RealtimeTranslator)
+            val inflater = LayoutInflater.from(themedContext)
 
             floatingView = inflater.inflate(R.layout.layout_floating_widget, null)
             bubbleView = inflater.inflate(R.layout.layout_floating_bubble, null)
@@ -105,16 +130,38 @@ class FloatingOverlayService : Service() {
                 WindowManager.LayoutParams.TYPE_PHONE
             }
 
+            val density = resources.displayMetrics.density
+            val screenWidth = resources.displayMetrics.widthPixels
+            val targetWidth = minOf((330 * density).toInt(), (screenWidth * 0.92f).toInt())
+            val yOffset = (100 * density).toInt()
+
+            // Params cho floating widget chính
             params = WindowManager.LayoutParams(
-                WindowManager.LayoutParams.WRAP_CONTENT,
+                targetWidth,
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 layoutFlag,
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                    WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
                 PixelFormat.TRANSLUCENT
             ).apply {
                 gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
                 x = 0
-                y = 200
+                y = yOffset
+            }
+
+            // Params RIÊNG cho bubble
+            bubbleParams = WindowManager.LayoutParams(
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                layoutFlag,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+                PixelFormat.TRANSLUCENT
+            ).apply {
+                gravity = Gravity.TOP or Gravity.START
+                x = (20 * density).toInt()
+                y = (150 * density).toInt()
             }
 
             tvOriginal = floatingView?.findViewById(R.id.tvOriginalText)
@@ -128,8 +175,14 @@ class FloatingOverlayService : Service() {
             floatingView?.visibility = View.VISIBLE
             windowManager?.addView(floatingView, params)
             Log.d(TAG, "Đã thêm cửa sổ nổi vào WindowManager thành công")
+            android.os.Handler(android.os.Looper.getMainLooper()).post {
+                android.widget.Toast.makeText(this, "✅ Cửa sổ dịch nổi đã sẵn sàng!", android.widget.Toast.LENGTH_SHORT).show()
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Lỗi khởi tạo Overlay: ${e.message}", e)
+            android.os.Handler(android.os.Looper.getMainLooper()).post {
+                android.widget.Toast.makeText(this, "Lỗi vẽ khung nổi: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
+            }
         }
     }
 
@@ -138,6 +191,71 @@ class FloatingOverlayService : Service() {
         val btnMinimize = floatingView?.findViewById<View>(R.id.btnMinimize)
         val btnClose = floatingView?.findViewById<View>(R.id.btnCloseOverlay)
         val btnSwap = floatingView?.findViewById<View>(R.id.btnSwapOverlay)
+        val btnResize = floatingView?.findViewById<View>(R.id.btnResizeOverlay)
+        val viewResizeCorner = floatingView?.findViewById<View>(R.id.viewResizeCorner)
+
+        // 1. Nút bấm đổi cỡ nhanh (⤢): Nhỏ -> Vừa -> Lớn
+        btnResize?.setOnClickListener {
+            currentSizeLevel = (currentSizeLevel + 1) % 3
+            val density = resources.displayMetrics.density
+            val screenWidth = resources.displayMetrics.widthPixels
+
+            when (currentSizeLevel) {
+                0 -> { // Nhỏ
+                    params?.width = (270 * density).toInt()
+                    tvOriginal?.textSize = 13f
+                    tvTranslated?.textSize = 13f
+                    android.widget.Toast.makeText(this, "Cỡ khung: Nhỏ (Compact)", android.widget.Toast.LENGTH_SHORT).show()
+                }
+                1 -> { // Vừa (Mặc định)
+                    params?.width = minOf((340 * density).toInt(), (screenWidth * 0.92f).toInt())
+                    tvOriginal?.textSize = 15f
+                    tvTranslated?.textSize = 15f
+                    android.widget.Toast.makeText(this, "Cỡ khung: Vừa (Standard)", android.widget.Toast.LENGTH_SHORT).show()
+                }
+                2 -> { // Lớn
+                    params?.width = (screenWidth * 0.96f).toInt()
+                    tvOriginal?.textSize = 17f
+                    tvTranslated?.textSize = 17f
+                    android.widget.Toast.makeText(this, "Cỡ khung: Lớn (Full)", android.widget.Toast.LENGTH_SHORT).show()
+                }
+            }
+            try {
+                windowManager?.updateViewLayout(floatingView, params)
+            } catch (e: Exception) {
+                Log.e(TAG, "Lỗi updateViewLayout size: ${e.message}")
+            }
+        }
+
+        // 2. Kéo góc dưới phải (⤡) để chỉnh độ rộng tùy ý
+        viewResizeCorner?.setOnTouchListener(object : View.OnTouchListener {
+            private var initialWidth = 0
+            private var initialTouchX = 0f
+
+            override fun onTouch(v: View?, event: MotionEvent): Boolean {
+                when (event.action) {
+                    MotionEvent.ACTION_DOWN -> {
+                        initialWidth = params?.width ?: floatingView?.width ?: 300
+                        initialTouchX = event.rawX
+                        return true
+                    }
+                    MotionEvent.ACTION_MOVE -> {
+                        val dx = (event.rawX - initialTouchX).toInt()
+                        val density = resources.displayMetrics.density
+                        val minWidth = (220 * density).toInt()
+                        val maxWidth = (resources.displayMetrics.widthPixels * 0.98f).toInt()
+                        val newWidth = (initialWidth + dx).coerceIn(minWidth, maxWidth)
+
+                        params?.width = newWidth
+                        try {
+                            windowManager?.updateViewLayout(floatingView, params)
+                        } catch (e: Exception) {}
+                        return true
+                    }
+                }
+                return false
+            }
+        })
 
         // Kéo thả di chuyển widget
         dragHandle?.setOnTouchListener(object : View.OnTouchListener {
@@ -168,12 +286,13 @@ class FloatingOverlayService : Service() {
             }
         })
 
-        // Nút thu nhỏ thành bong bóng
+        // Nút thu nhỏ thành bong bóng (_)
         btnMinimize?.setOnClickListener {
             floatingView?.visibility = View.GONE
             try {
-                if (bubbleView?.windowToken == null) {
-                    windowManager?.addView(bubbleView, params)
+                if (!isBubbleAdded) {
+                    windowManager?.addView(bubbleView, bubbleParams)
+                    isBubbleAdded = true
                 } else {
                     bubbleView?.visibility = View.VISIBLE
                 }
@@ -182,8 +301,17 @@ class FloatingOverlayService : Service() {
             }
         }
 
-        // Nút đóng
+        // Nút đóng hoàn toàn (✕)
         btnClose?.setOnClickListener {
+            try {
+                // Dừng hẳn dịch vụ thu âm để không bị lỗi gọi ngầm
+                stopService(Intent(this, AudioCaptureService::class.java))
+            } catch (e: Exception) {
+                Log.e(TAG, "Lỗi dừng AudioCaptureService: ${e.message}")
+            }
+            // Ẩn lập tức trên màn hình
+            floatingView?.visibility = View.GONE
+            bubbleView?.visibility = View.GONE
             stopSelf()
         }
 
@@ -204,32 +332,44 @@ class FloatingOverlayService : Service() {
     }
 
     private fun setupBubbleInteractions() {
-        bubbleView?.setOnClickListener {
-            bubbleView?.visibility = View.GONE
-            floatingView?.visibility = View.VISIBLE
-        }
-
         bubbleView?.setOnTouchListener(object : View.OnTouchListener {
             private var initialX = 0
             private var initialY = 0
             private var initialTouchX = 0f
             private var initialTouchY = 0f
+            private var startClickTime = 0L
 
             override fun onTouch(v: View?, event: MotionEvent): Boolean {
                 when (event.action) {
                     MotionEvent.ACTION_DOWN -> {
-                        initialX = params?.x ?: 0
-                        initialY = params?.y ?: 0
+                        initialX = bubbleParams?.x ?: 0
+                        initialY = bubbleParams?.y ?: 0
                         initialTouchX = event.rawX
                         initialTouchY = event.rawY
-                        return false
+                        startClickTime = System.currentTimeMillis()
+                        return true
                     }
                     MotionEvent.ACTION_MOVE -> {
-                        params?.x = initialX + (event.rawX - initialTouchX).toInt()
-                        params?.y = initialY + (event.rawY - initialTouchY).toInt()
-                        try {
-                            windowManager?.updateViewLayout(bubbleView, params)
-                        } catch (e: Exception) {}
+                        val dx = (event.rawX - initialTouchX).toInt()
+                        val dy = (event.rawY - initialTouchY).toInt()
+                        if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
+                            bubbleParams?.x = initialX + dx
+                            bubbleParams?.y = initialY + dy
+                            try {
+                                windowManager?.updateViewLayout(bubbleView, bubbleParams)
+                            } catch (e: Exception) {}
+                        }
+                        return true
+                    }
+                    MotionEvent.ACTION_UP -> {
+                        val duration = System.currentTimeMillis() - startClickTime
+                        val dx = Math.abs(event.rawX - initialTouchX)
+                        val dy = Math.abs(event.rawY - initialTouchY)
+                        if (duration < 350 && dx < 20 && dy < 20) {
+                            // Chạm vào bong bóng -> Mở lại khung nổi
+                            bubbleView?.visibility = View.GONE
+                            floatingView?.visibility = View.VISIBLE
+                        }
                         return true
                     }
                 }
@@ -244,11 +384,8 @@ class FloatingOverlayService : Service() {
                 srcLang = intent.getStringExtra(EXTRA_SRC_LANG) ?: "en"
                 tgtLang = intent.getStringExtra(EXTRA_TGT_LANG) ?: "vi"
                 updateLanguageTags()
-                if (floatingView?.windowToken == null) {
-                    initOverlay()
-                } else {
-                    floatingView?.visibility = View.VISIBLE
-                }
+                // Khởi tạo overlay tại đây (an toàn hơn, chắc chắn quyền đã cấp)
+                initOverlay()
             }
             ACTION_UPDATE_TEXT -> {
                 val orig = intent.getStringExtra(EXTRA_ORIGINAL_TEXT) ?: ""
@@ -305,7 +442,7 @@ class FloatingOverlayService : Service() {
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Cửa sổ dịch đang chạy")
             .setContentText("Nhấn để mở giao diện cài đặt")
-            .setSmallIcon(R.drawable.bg_bubble)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
             .build()
@@ -313,15 +450,24 @@ class FloatingOverlayService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        instance = null
+        isOverlayAdded = false
+        isBubbleAdded = false
         try {
-            if (floatingView != null && floatingView?.windowToken != null) {
+            if (floatingView != null && floatingView?.parent != null) {
                 windowManager?.removeView(floatingView)
             }
-            if (bubbleView != null && bubbleView?.windowToken != null) {
+        } catch (e: Exception) {
+            Log.e(TAG, "Lỗi removeView floatingView onDestroy: ${e.message}")
+        }
+        try {
+            if (bubbleView != null && bubbleView?.parent != null) {
                 windowManager?.removeView(bubbleView)
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Lỗi removeView onDestroy: ${e.message}")
+            Log.e(TAG, "Lỗi removeView bubbleView onDestroy: ${e.message}")
         }
+        floatingView = null
+        bubbleView = null
     }
 }

@@ -9,53 +9,82 @@
 
     <!-- Header bar (Thanh kéo thả + Điều khiển) -->
     <LinearLayout
-        android:id="@+id/layoutDragHandle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:paddingBottom="8dp">
 
-        <TextView
+        <!-- Vùng kéo thả riêng: Chỉ title và thanh tiêu đề, không đè lên các nút bấm -->
+        <LinearLayout
+            android:id="@+id/layoutDragHandle"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="34dp"
             android:layout_weight="1"
-            android:text="🎙️ TRANSLATOR"
-            android:textColor="@color/primary"
-            android:textSize="11sp"
-            android:textStyle="bold"
-            android:letterSpacing="0.08" />
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="● LIVE TRANSLATE"
+                android:textColor="@color/primary"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.08" />
+        </LinearLayout>
 
         <TextView
             android:id="@+id/btnSwapOverlay"
-            android:layout_width="28dp"
-            android:layout_height="28dp"
+            android:layout_width="34dp"
+            android:layout_height="34dp"
             android:gravity="center"
             android:text="⇄"
             android:textColor="@color/text_secondary"
-            android:textSize="14sp"
+            android:textSize="15sp"
+            android:clickable="true"
+            android:focusable="true"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:layout_marginEnd="4dp" />
+            android:layout_marginEnd="2dp" />
+
+        <TextView
+            android:id="@+id/btnResizeOverlay"
+            android:layout_width="34dp"
+            android:layout_height="34dp"
+            android:gravity="center"
+            android:text="⤢"
+            android:textColor="@color/text_secondary"
+            android:textSize="15sp"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:layout_marginEnd="2dp" />
 
         <TextView
             android:id="@+id/btnMinimize"
-            android:layout_width="28dp"
-            android:layout_height="28dp"
+            android:layout_width="34dp"
+            android:layout_height="34dp"
             android:gravity="center"
             android:text="—"
             android:textColor="@color/text_secondary"
-            android:textSize="14sp"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:clickable="true"
+            android:focusable="true"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:layout_marginEnd="4dp" />
+            android:layout_marginEnd="2dp" />
 
         <TextView
             android:id="@+id/btnCloseOverlay"
-            android:layout_width="28dp"
-            android:layout_height="28dp"
+            android:layout_width="34dp"
+            android:layout_height="34dp"
             android:gravity="center"
             android:text="✕"
             android:textColor="@color/red"
-            android:textSize="13sp"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:clickable="true"
+            android:focusable="true"
             android:background="?attr/selectableItemBackgroundBorderless" />
     </LinearLayout>
 
@@ -95,6 +124,8 @@
             android:textColor="@color/text_primary"
             android:textSize="15sp"
             android:textStyle="bold"
+            android:maxLines="3"
+            android:ellipsize="end"
             android:lineSpacingExtra="3dp" />
     </LinearLayout>
 
@@ -133,7 +164,28 @@
             android:text="Bản dịch sẽ xuất hiện tại đây..."
             android:textColor="@color/text_green"
             android:textSize="15sp"
+            android:maxLines="4"
+            android:ellipsize="end"
             android:lineSpacingExtra="3dp" />
+    </LinearLayout>
+
+    <!-- Thanh kéo chỉnh kích cỡ góc dưới cùng bên phải -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="end|center_vertical"
+        android:paddingTop="2dp">
+
+        <TextView
+            android:id="@+id/viewResizeCorner"
+            android:layout_width="28dp"
+            android:layout_height="22dp"
+            android:gravity="end|bottom"
+            android:text="⤡"
+            android:textColor="@color/text_muted"
+            android:textSize="14sp"
+            android:paddingEnd="2dp" />
     </LinearLayout>
 
 </LinearLayout>
