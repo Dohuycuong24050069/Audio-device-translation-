@@ -81,28 +81,18 @@
       <div class="source-section">
         <div class="section-label">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="4" x2="4" y1="21" y2="14"/><line x1="4" x2="4" y1="10" y2="3"/><line x1="12" x2="12" y1="21" y2="12"/><line x1="12" x2="12" y1="8" y2="3"/><line x1="20" x2="20" y1="21" y2="16"/><line x1="20" x2="20" y1="12" y2="3"/><line x1="1" x2="7" y1="14" y2="14"/><line x1="9" x2="15" y1="8" y2="8"/><line x1="17" x2="23" y1="16" y2="16"/>
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
           </svg>
-          Nguồn thu âm thanh
+          Chế độ thu âm thanh
         </div>
-        <div class="radio-group">
-          <label class="radio-option" id="radio-mic">
-            <input type="radio" name="audio-source" value="mic" checked />
-            <span class="radio-custom"></span>
-            <svg class="opt-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/>
-            </svg>
-            <span>Microphone trực tiếp</span>
-          </label>
-          <label class="radio-option" id="radio-demo">
-            <input type="radio" name="audio-source" value="demo" />
-            <span class="radio-custom"></span>
-            <svg class="opt-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
-            </svg>
-            <span>Giả lập âm thanh thiết bị (Demo)</span>
-          </label>
+        <div class="mode-badge-card" style="padding: 12px 14px; background: rgba(99, 102, 241, 0.08); border: 1px solid var(--a-border); border-radius: var(--r-m); display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+          <div>
+            <div style="font-size: 12.5px; font-weight: 600; color: var(--t1);">Âm thanh nội bộ thiết bị</div>
+            <div style="font-size: 10.5px; color: var(--t2); margin-top: 2px;">YouTube, TikTok, Phim, Game... Không thu Micro.</div>
+          </div>
+          <span style="font-size: 9.5px; font-weight: 700; color: var(--a-light); background: var(--a-dim); padding: 3px 8px; border-radius: 6px; white-space: nowrap;">DUY NHẤT</span>
         </div>
+        <input type="radio" name="audio-source" value="demo" checked style="display:none;" />
       </div>
 
       <!-- Display Options -->

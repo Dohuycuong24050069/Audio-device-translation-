@@ -8,25 +8,24 @@
 [![Platform Android](https://img.shields.io/badge/Platform-Android%2010%2B-blue.svg)](https://developer.android.com)
 [![Offline AI](https://img.shields.io/badge/AI-Vosk%20Offline-orange.svg)](https://alphacephei.com/vosk/)
 
-A high-performance Android application for **Real-Time Internal Device Audio & Microphone Translation** featuring an interactive **Floating Overlay Subtitle Window** that renders over any application (YouTube, TikTok, Netflix, Games, Reels, etc.).
+A high-performance Android application for **Real-Time Internal Device Audio Translation** featuring an interactive **Floating Overlay Subtitle Window** that renders over any application (YouTube, TikTok, Netflix, Games, Reels, etc.).
 
-Powered by **Vosk Offline Speech-to-Text (STT)** and **Google ML Kit On-Device Translation** — **100% Free Forever, No API Keys Required, and Fully Private**.
+Powered by **Vosk Offline Speech-to-Text (STT)** and **Google Neural & ML Kit Translation** — **100% Free Forever, No Ambient Noise, Pure Internal Audio**.
 
-> 📥 **Direct APK Download**: **[TransLive_v1.0.1.apk (v1.0.1)](https://github.com/Dohuycuong24050069/Audio-device-translation-/releases/latest)** (~144 MB, Ready to install on Android).
+> 📥 **Direct APK Download**: **[TransLive_v1.0.2.apk (v1.0.2)](https://github.com/Dohuycuong24050069/Audio-device-translation-/releases/latest)** (~144 MB, Ready to install on Android).
 
 ---
 
 ## ✨ Key Features
 
-### 1. 🧠 100% Offline Speech Recognition & Translation
-- **Vosk AI Offline STT**: Bundles the `vosk-model-small-en-us-0.15` model directly inside Android assets. Automatically uncompressed to private internal app storage on first launch with deterministic verification. Zero network requests, no Google Cloud speech quotas, and zero recurring costs.
-- **Ultra-Low Latency Pipeline (50ms)**: Samples audio at 16 kHz Mono PCM using an optimized 800-sample buffer with pre-allocated byte arrays, completely eliminating Garbage Collection (GC) pauses for instant transcription.
-- **Google ML Kit On-Device Translation**: Translates English to Vietnamese (and vice-versa) on-device with sub-30ms inference speed.
-- **Live-Streaming Sentence Translation**: Translates incrementally as speech occurs (~200ms debounce), so Vietnamese subtitles update in parallel with spoken words rather than waiting for sentence completion.
+### 1. 🧠 High-Accuracy Speech Recognition & Neural Translation
+- **Vosk AI STT (50ms Low-Latency)**: Bundles the `vosk-model-small-en-us-0.15` model directly inside Android assets. Samples audio at 16 kHz Mono PCM using an optimized 800-sample buffer with 0ms Garbage Collection pause.
+- **Enhanced Neural Translation**: Integrates Google Neural Translation Engine for natural, fluent, and highly accurate Vietnamese phrasing, with Google ML Kit On-Device translation as offline fallback when disconnected.
+- **Auto-Formatting & Debounce**: Intelligently capitalizes clauses and formats partial transcripts for maximum translation accuracy.
 
-### 2. 🔊 Dual Audio Source Capture
-- **Internal Device Audio (Android 10+)**: Utilizes `AudioPlaybackCaptureConfiguration` combined with `MediaProjection` to capture clean internal audio from YouTube, TikTok, podcasts, and games with zero ambient noise or microphone echo.
-- **Microphone Mode**: One-tap switch in `MainActivity` to capture and transcribe external ambient speech and conversations.
+### 2. 🔊 100% Pure Internal Device Audio Capture (Android 10+)
+- **Internal Audio Only**: Exclusively utilizes `AudioPlaybackCaptureConfiguration` with `MediaProjection` to capture clean internal audio from YouTube, TikTok, podcasts, Netflix, and games.
+- **Zero Background/Mic Noise**: Completely bypasses the microphone, ensuring 100% clean sound from media without ambient interference or echo.
 
 ### 3. 🪟 Interactive Floating Overlay Widget
 - **Dual Subtitle Display**:

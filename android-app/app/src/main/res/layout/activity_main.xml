@@ -256,17 +256,22 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="YouTube, TikTok, Phim, Game..."
+                            android:text="Chỉ thu âm trong máy (YouTube, TikTok, Game...). Không thu Micro."
                             android:textColor="@color/text_muted"
                             android:textSize="11sp"
                             android:layout_marginTop="2dp" />
                     </LinearLayout>
 
-                    <com.google.android.material.switchmaterial.SwitchMaterial
-                        android:id="@+id/switchAudioSource"
+                    <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:checked="true" />
+                        android:text="DUY NHẤT"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/primary"
+                        android:background="@drawable/bg_lang_tag"
+                        android:paddingHorizontal="10dp"
+                        android:paddingVertical="5dp" />
                 </LinearLayout>
             </LinearLayout>
         </androidx.cardview.widget.CardView>

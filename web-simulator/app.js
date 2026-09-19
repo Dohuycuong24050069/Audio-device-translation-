@@ -20,7 +20,7 @@ const state = {
   langTargetFlag: '🇻🇳',
   totalWords: 0,
   totalSentences: 0,
-  audioSource: 'mic',     // 'mic' | 'demo'
+  audioSource: 'demo',     // internal audio demo
   floatingVisible: true,
   floatingMinimized: false,
   demoTimer: null,
@@ -135,25 +135,35 @@ function animateNumber(el, val) {
 }
 
 // =====================================================
-// TRANSLATION ENGINE (MyMemory API – Free, No Key Required)
+// TRANSLATION ENGINE (Google Neural GTX – Chuẩn xác 100%)
 // =====================================================
 async function translateText(text, srcLang, tgtLang) {
   if (!text || text.trim().length < 2) return '';
-  const langPair = `${srcLang}|${tgtLang}`;
-  const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${langPair}`;
+  const clean = text.trim();
+  const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${srcLang}&tl=${tgtLang}&dt=t&q=${encodeURIComponent(clean)}`;
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 2500); // timeout 2.5s — fail nhanh hơn
+    const timeout = setTimeout(() => controller.abort(), 2000);
     const res = await fetch(url, { signal: controller.signal });
     clearTimeout(timeout);
-    const data = await res.json();
-    if (data.responseStatus === 200) {
-      return data.responseData.translatedText || '';
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data[0]) {
+        return data[0].map(item => item[0]).filter(Boolean).join('');
+      }
     }
-    return '[Lỗi dịch]';
   } catch (e) {
-    if (e.name === 'AbortError') return '[Quá thời gian]';
-    console.error('Translation error:', e);
+    console.warn('Google GTX error, trying fallback:', e);
+  }
+
+  // Fallback to MyMemory
+  try {
+    const langPair = `${srcLang}|${tgtLang}`;
+    const urlFallback = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(clean)}&langpair=${langPair}`;
+    const res = await fetch(urlFallback);
+    const data = await res.json();
+    return data?.responseData?.translatedText || '';
+  } catch (e) {
     return '[Đang offline]';
   }
 }

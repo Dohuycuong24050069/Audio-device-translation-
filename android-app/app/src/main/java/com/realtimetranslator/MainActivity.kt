@@ -19,7 +19,8 @@ import androidx.core.content.ContextCompat
 import com.realtimetranslator.databinding.ActivityMainBinding
 
 /**
- * MainActivity – Giao diện điều khiển chính
+ * MainActivity – Giao diện điều khiển chính của TransLive
+ * Chuyên dịch âm thanh nội bộ thiết bị (Internal Audio Only)
  */
 class MainActivity : AppCompatActivity() {
 
@@ -48,10 +49,10 @@ class MainActivity : AppCompatActivity() {
             }
             isServiceRunning = true
             updateUI()
-            Toast.makeText(this, "✅ Đã bật dịch âm thanh thiết bị!", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "✅ Đã bật thu âm thanh thiết bị!", Toast.LENGTH_SHORT).show()
         } else {
-            Toast.makeText(this, "Chuyển sang chế độ thu âm Micro", Toast.LENGTH_SHORT).show()
-            startMicTranslationService()
+            Toast.makeText(this, "⚠️ Cần cấp quyền để thu âm thanh phát ra trong máy!", Toast.LENGTH_LONG).show()
+            stopTranslationService()
         }
     }
 
@@ -114,15 +115,6 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, "↔ Đảo chiều: ${ if (sourceLanguage == "en") "EN → VI" else "VI → EN" }", Toast.LENGTH_SHORT).show()
         }
 
-        // Nguồn âm thanh toggle
-        binding.switchAudioSource.setOnCheckedChangeListener { _, isChecked ->
-            val intent = Intent(this, AudioCaptureService::class.java).apply {
-                action = if (isChecked) AudioCaptureService.ACTION_USE_SYSTEM_AUDIO
-                         else AudioCaptureService.ACTION_USE_MIC
-            }
-            if (isServiceRunning) startService(intent)
-        }
-
         // Slider cỡ chữ floating widget
         binding.seekbarFontSize.setOnSeekBarChangeListener(object : android.widget.SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(sb: android.widget.SeekBar?, progress: Int, fromUser: Boolean) {
@@ -157,7 +149,7 @@ class MainActivity : AppCompatActivity() {
                     overlayPermissionLauncher.launch(fallbackIntent)
                 }
             }
-            // 2. Quyền Micro
+            // 2. Quyền Audio Record (yêu cầu bởi AudioRecord)
             ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
                 != PackageManager.PERMISSION_GRANTED -> {
                 checkAndRequestAudioPermission()
@@ -195,7 +187,7 @@ class MainActivity : AppCompatActivity() {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 startTranslationService()
             } else {
-                Toast.makeText(this, "❌ Cần quyền Microphone để dịch âm thanh!", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "❌ Cần cấp quyền để thu âm thanh!", Toast.LENGTH_LONG).show()
             }
         } else if (requestCode == REQUEST_NOTIFICATION_PERMISSION) {
             startTranslationService()
@@ -203,7 +195,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startTranslationService() {
-        // 1. Khởi động FloatingOverlayService luôn để người dùng thấy ngay cửa sổ nổi
+        // 1. Khởi động FloatingOverlayService
         try {
             val overlayIntent = Intent(this, FloatingOverlayService::class.java).apply {
                 action = FloatingOverlayService.ACTION_START
@@ -226,39 +218,24 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, "Lỗi khởi động khung nổi: ${e.message}", Toast.LENGTH_LONG).show()
         }
 
-        // 2. Bật dịch âm thanh thiết bị (MediaProjection) hoặc Microphone
-        if (binding.switchAudioSource.isChecked && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        // 2. Yêu cầu quyền MediaProjection để thu âm thanh nội bộ máy
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             try {
                 val mediaProjectionManager = getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
                 mediaProjectionLauncher.launch(mediaProjectionManager.createScreenCaptureIntent())
             } catch (e: Exception) {
-                Log.e(TAG, "Lỗi tạo ScreenCaptureIntent: ${e.message}, dùng mic")
-                startMicTranslationService()
+                Log.e(TAG, "Lỗi tạo ScreenCaptureIntent: ${e.message}")
+                Toast.makeText(this, "Lỗi khởi động thu âm thiết bị: ${e.message}", Toast.LENGTH_LONG).show()
+                stopTranslationService()
             }
         } else {
-            startMicTranslationService()
+            Toast.makeText(this, "⚠️ Tính năng thu âm nội bộ yêu cầu Android 10 trở lên!", Toast.LENGTH_LONG).show()
         }
     }
 
     private fun isXiaomiDevice(): Boolean {
         val m = Build.MANUFACTURER?.lowercase(java.util.Locale.ROOT) ?: ""
         return m.contains("xiaomi") || m.contains("redmi") || m.contains("poco")
-    }
-
-    private fun startMicTranslationService() {
-        try {
-            val micIntent = Intent(this, AudioCaptureService::class.java).apply {
-                action = AudioCaptureService.ACTION_START
-                putExtra(AudioCaptureService.EXTRA_SRC_LANG, sourceLanguage)
-                putExtra(AudioCaptureService.EXTRA_TGT_LANG, targetLanguage)
-            }
-            ContextCompat.startForegroundService(this, micIntent)
-            isServiceRunning = true
-            updateUI()
-            Toast.makeText(this, "✅ Cửa sổ dịch đã hiển thị!", Toast.LENGTH_SHORT).show()
-        } catch (e: Exception) {
-            Log.e(TAG, "Lỗi startMicTranslationService: ${e.message}")
-        }
     }
 
     private fun stopTranslationService() {
@@ -279,14 +256,14 @@ class MainActivity : AppCompatActivity() {
             binding.btnToggleService.setBackgroundColor(
                 ContextCompat.getColor(this, R.color.status_danger)
             )
-            binding.tvStatus.text = "🟢 Đang dịch real-time • Cửa sổ nổi đang hiển thị"
+            binding.tvStatus.text = "🟢 Đang thu âm thiết bị • Cửa sổ nổi hiển thị"
             binding.cardStatus.visibility = View.VISIBLE
         } else {
             binding.btnToggleService.text = "▶  Bắt đầu dịch"
             binding.btnToggleService.setBackgroundColor(
                 ContextCompat.getColor(this, R.color.primary)
             )
-            binding.tvStatus.text = "⚪ Chưa khởi động"
+            binding.tvStatus.text = "⚪ Sẵn sàng thu âm thiết bị"
             binding.cardStatus.visibility = View.VISIBLE
         }
     }
