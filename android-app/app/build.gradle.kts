@@ -11,8 +11,8 @@ android {
         applicationId = "com.realtimetranslator"
         minSdk = 24          // Hỗ trợ từ Android 7.0 trở lên, cài được trên mọi máy
         targetSdk = 34
-        versionCode = 4
-        versionName = "1.0.3"
+        versionCode = 5
+        versionName = "1.0.4"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         ndk {

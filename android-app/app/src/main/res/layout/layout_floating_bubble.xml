@@ -6,9 +6,10 @@
     android:elevation="10dp">
 
     <ImageView
-        android:layout_width="24dp"
-        android:layout_height="24dp"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
         android:layout_gravity="center"
-        android:src="@drawable/ic_mic_vector"
+        android:src="@drawable/ic_app_logo"
+        android:scaleType="centerCrop"
         android:contentDescription="@string/app_name" />
 </FrameLayout>
