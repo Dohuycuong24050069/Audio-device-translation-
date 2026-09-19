@@ -12,7 +12,7 @@ A high-performance Android application for **Real-Time Internal Device Audio & M
 
 Powered by **Vosk Offline Speech-to-Text (STT)** and **Google ML Kit On-Device Translation** — **100% Free Forever, No API Keys Required, and Fully Private**.
 
-> 📥 **Direct APK Download**: **[TransLive_v1.0.apk (v1.0.0)](https://github.com/Dohuycuong24050069/Audio-device-translation-/releases/latest)** (~144 MB, Ready to install on Android).
+> 📥 **Direct APK Download**: **[TransLive_v1.0.1.apk (v1.0.1)](https://github.com/Dohuycuong24050069/Audio-device-translation-/releases/latest)** (~144 MB, Ready to install on Android).
 
 ---
 
