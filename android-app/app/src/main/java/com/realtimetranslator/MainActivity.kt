@@ -29,7 +29,6 @@ class MainActivity : AppCompatActivity() {
     private var isServiceRunning = false
     private var sourceLanguage = "en"
     private var targetLanguage = "vi"
-    private var selectedAudioSource = AudioCaptureService.SOURCE_INTERNAL
 
     // Launcher cho quyền MediaProjection (thu âm thanh thiết bị)
     private val mediaProjectionLauncher = registerForActivityResult(
@@ -42,7 +41,6 @@ class MainActivity : AppCompatActivity() {
                 putExtra(AudioCaptureService.EXTRA_RESULT_DATA, result.data)
                 putExtra(AudioCaptureService.EXTRA_SRC_LANG, sourceLanguage)
                 putExtra(AudioCaptureService.EXTRA_TGT_LANG, targetLanguage)
-                putExtra(AudioCaptureService.EXTRA_AUDIO_SOURCE, selectedAudioSource)
             }
             try {
                 ContextCompat.startForegroundService(this, intent)
@@ -53,19 +51,8 @@ class MainActivity : AppCompatActivity() {
             updateUI()
             Toast.makeText(this, "✅ Đã bật thu âm thanh thiết bị!", Toast.LENGTH_SHORT).show()
         } else {
-            Toast.makeText(this, "⚠️ Không cấp quyền quay màn hình, tự động bật chế độ Loa ngoài!", Toast.LENGTH_SHORT).show()
-            selectAudioSource(AudioCaptureService.SOURCE_SPEAKER)
-            val intent = Intent(this, AudioCaptureService::class.java).apply {
-                action = AudioCaptureService.ACTION_START
-                putExtra(AudioCaptureService.EXTRA_SRC_LANG, sourceLanguage)
-                putExtra(AudioCaptureService.EXTRA_TGT_LANG, targetLanguage)
-                putExtra(AudioCaptureService.EXTRA_AUDIO_SOURCE, AudioCaptureService.SOURCE_SPEAKER)
-            }
-            try {
-                ContextCompat.startForegroundService(this, intent)
-            } catch (e: Exception) {}
-            isServiceRunning = true
-            updateUI()
+            Toast.makeText(this, "⚠️ Cần cấp quyền để thu âm thanh phát ra trong máy!", Toast.LENGTH_LONG).show()
+            stopTranslationService()
         }
     }
 
@@ -143,43 +130,7 @@ class MainActivity : AppCompatActivity() {
             override fun onStopTrackingTouch(sb: android.widget.SeekBar?) {}
         })
 
-        // Nút chọn chế độ nguồn âm thanh
-        binding.btnModeInternal.setOnClickListener {
-            selectAudioSource(AudioCaptureService.SOURCE_INTERNAL)
-        }
-        binding.btnModeSpeaker.setOnClickListener {
-            selectAudioSource(AudioCaptureService.SOURCE_SPEAKER)
-        }
-
         updateLanguageUI()
-        updateSourceModeUI()
-    }
-
-    private fun selectAudioSource(source: String) {
-        selectedAudioSource = source
-        updateSourceModeUI()
-
-        if (isServiceRunning) {
-            val intent = Intent(this, AudioCaptureService::class.java).apply {
-                action = AudioCaptureService.ACTION_SWITCH_SOURCE
-                putExtra(AudioCaptureService.EXTRA_AUDIO_SOURCE, selectedAudioSource)
-            }
-            startService(intent)
-        }
-    }
-
-    private fun updateSourceModeUI() {
-        if (selectedAudioSource == AudioCaptureService.SOURCE_INTERNAL) {
-            binding.tvModeInternalTitle.setTextColor(ContextCompat.getColor(this, R.color.accent))
-            binding.tvModeSpeakerTitle.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
-            binding.btnModeInternal.alpha = 1.0f
-            binding.btnModeSpeaker.alpha = 0.6f
-        } else {
-            binding.tvModeInternalTitle.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
-            binding.tvModeSpeakerTitle.setTextColor(ContextCompat.getColor(this, R.color.accent))
-            binding.btnModeInternal.alpha = 0.6f
-            binding.btnModeSpeaker.alpha = 1.0f
-        }
     }
 
     private fun checkPermissionsAndStart() {
@@ -267,43 +218,18 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, "Lỗi khởi động khung nổi: ${e.message}", Toast.LENGTH_LONG).show()
         }
 
-        // 2. Thu âm thanh
-        if (selectedAudioSource == AudioCaptureService.SOURCE_SPEAKER) {
-            // Chế độ Discord / Loa ngoài: Không cần xin quyền quay màn hình MediaProjection!
-            val intent = Intent(this, AudioCaptureService::class.java).apply {
-                action = AudioCaptureService.ACTION_START
-                putExtra(AudioCaptureService.EXTRA_SRC_LANG, sourceLanguage)
-                putExtra(AudioCaptureService.EXTRA_TGT_LANG, targetLanguage)
-                putExtra(AudioCaptureService.EXTRA_AUDIO_SOURCE, AudioCaptureService.SOURCE_SPEAKER)
-            }
+        // 2. Yêu cầu quyền MediaProjection để thu âm thanh nội bộ máy
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             try {
-                ContextCompat.startForegroundService(this, intent)
+                val mediaProjectionManager = getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+                mediaProjectionLauncher.launch(mediaProjectionManager.createScreenCaptureIntent())
             } catch (e: Exception) {
-                Log.e(TAG, "Lỗi khởi động AudioCaptureService: ${e.message}")
+                Log.e(TAG, "Lỗi tạo ScreenCaptureIntent: ${e.message}")
+                Toast.makeText(this, "Lỗi khởi động thu âm thiết bị: ${e.message}", Toast.LENGTH_LONG).show()
+                stopTranslationService()
             }
-            Toast.makeText(this, "🎙️ Đã bật thu âm Discord & Loa ngoài! Bật loa ngoài Discord để nghe rõ.", Toast.LENGTH_LONG).show()
         } else {
-            // Chế độ âm thanh trong máy: Yêu cầu MediaProjection
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                try {
-                    val mediaProjectionManager = getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
-                    mediaProjectionLauncher.launch(mediaProjectionManager.createScreenCaptureIntent())
-                } catch (e: Exception) {
-                    Log.e(TAG, "Lỗi tạo ScreenCaptureIntent: ${e.message}")
-                    Toast.makeText(this, "Lỗi khởi động thu âm thiết bị: ${e.message}", Toast.LENGTH_LONG).show()
-                    stopTranslationService()
-                }
-            } else {
-                Toast.makeText(this, "⚠️ Thu âm nội bộ yêu cầu Android 10+. Tự động chuyển sang Loa ngoài.", Toast.LENGTH_SHORT).show()
-                selectAudioSource(AudioCaptureService.SOURCE_SPEAKER)
-                val intent = Intent(this, AudioCaptureService::class.java).apply {
-                    action = AudioCaptureService.ACTION_START
-                    putExtra(AudioCaptureService.EXTRA_SRC_LANG, sourceLanguage)
-                    putExtra(AudioCaptureService.EXTRA_TGT_LANG, targetLanguage)
-                    putExtra(AudioCaptureService.EXTRA_AUDIO_SOURCE, AudioCaptureService.SOURCE_SPEAKER)
-                }
-                ContextCompat.startForegroundService(this, intent)
-            }
+            Toast.makeText(this, "⚠️ Tính năng thu âm nội bộ yêu cầu Android 10 trở lên!", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -330,27 +256,16 @@ class MainActivity : AppCompatActivity() {
             binding.btnToggleService.setBackgroundColor(
                 ContextCompat.getColor(this, R.color.status_danger)
             )
-            val modeText = if (selectedAudioSource == AudioCaptureService.SOURCE_SPEAKER) {
-                "🎙️ Đang thu Discord / Loa ngoài"
-            } else {
-                "🔊 Đang thu âm thanh trong máy"
-            }
-            binding.tvStatus.text = "🟢 $modeText • Khung nổi đang bật"
+            binding.tvStatus.text = "🟢 Đang thu âm thanh thiết bị • Cửa sổ nổi hiển thị"
             binding.cardStatus.visibility = View.VISIBLE
         } else {
             binding.btnToggleService.text = "▶  Bắt đầu dịch"
             binding.btnToggleService.setBackgroundColor(
                 ContextCompat.getColor(this, R.color.primary)
             )
-            val modeText = if (selectedAudioSource == AudioCaptureService.SOURCE_SPEAKER) {
-                "Discord / Loa ngoài"
-            } else {
-                "Âm thanh trong máy"
-            }
-            binding.tvStatus.text = "⚪ Sẵn sàng thu âm ($modeText)"
+            binding.tvStatus.text = "⚪ Sẵn sàng thu âm thanh thiết bị"
             binding.cardStatus.visibility = View.VISIBLE
         }
-        updateSourceModeUI()
     }
 
     private fun updateLanguageUI() {

@@ -1,41 +1,44 @@
-# 🎙️ TransLive – AI Realtime Audio Translator (100% Offline Android App)
+# 🔊 TransLive – AI Realtime Device Audio Translator (Android App)
 
 <p align="center">
-  <img src="web-simulator/logo.jpg" alt="TransLive Logo" width="120" style="border-radius: 24px;" />
+  <img src="web-simulator/logo.jpg" alt="TransLive Logo" width="120" style="border-radius: 28px;" />
 </p>
 
 [![GitHub Release](https://img.shields.io/github/v/release/Dohuycuong24050069/Audio-device-translation-?color=brightgreen&label=Latest%20Release)](https://github.com/Dohuycuong24050069/Audio-device-translation-/releases/latest)
 [![Platform Android](https://img.shields.io/badge/Platform-Android%2010%2B-blue.svg)](https://developer.android.com)
 [![Offline AI](https://img.shields.io/badge/AI-Vosk%20Offline-orange.svg)](https://alphacephei.com/vosk/)
 
-A high-performance Android application for **Real-Time Internal Device Audio Translation** featuring an interactive **Floating Overlay Subtitle Window** that renders over any application (YouTube, TikTok, Netflix, Games, Reels, etc.).
+A high-performance Android application for **Real-Time Internal Device Audio Translation** featuring an interactive **Floating Overlay Subtitle Window** that renders over any application (YouTube, TikTok, Netflix, Games, Reels, Podcast, etc.).
 
-Powered by **Vosk Offline Speech-to-Text (STT)** and **Google Neural & ML Kit Translation** — **100% Free Forever, No Ambient Noise, Pure Internal Audio**.
+Powered by **Vosk Offline Speech-to-Text (STT)** and **Google Neural Translation** — **100% Free Forever, Zero Microphone Ambience, Pure Internal Device Audio Only**.
 
-> 📥 **Direct APK Download**: **[TransLive_v1.0.6.apk (v1.0.6)](https://github.com/Dohuycuong24050069/Audio-device-translation-/releases/latest)** (~144 MB, Ready to install on Android).
+> 📥 **Direct APK Download**: **[TransLive_v1.0.7.apk (v1.0.7)](https://github.com/Dohuycuong24050069/Audio-device-translation-/releases/latest)** (~141 MB, Ready to install on Android).
 
 ---
 
-## ✨ Key Features
+## ✨ Key Features (v1.0.7)
 
-### 1. 🎙️ Dual Audio Modes: Internal Media & Discord / Speakerphone
-- **🔊 Mode 1: Âm thanh trong máy (Internal Audio)**: Thu trực tiếp luồng âm thanh kỹ thuật số sạch sẽ từ YouTube, TikTok, Netflix, Game qua `AudioPlaybackCapture` (Android 10+). Không lẫn tạp âm môi trường bên ngoài.
-- **🎙️ Mode 2: Discord & Loa ngoài (Speakerphone Mode)**: Khắc phục giới hạn bảo mật cuộc gọi của Android (Android chặn thu nội bộ cuộc gọi thoại Discord/VoIP). Chế độ này sử dụng engine `VOICE_RECOGNITION` lọc ồn chuyên biệt để thu âm thanh giọng nói phát ra trực tiếp từ loa ngoài của điện thoại khi đàm thoại Discord hoặc nghe gọi video.
-- **Chuyển đổi 1 chạm (🔊 ⇄ 🎙️)**: Nút chuyển nguồn âm thanh tích hợp trực tiếp ngay trên thanh tiêu đề của khung phụ đề nổi, chuyển đổi nguồn thu tức thì không cần thoát Discord.
+### 1. 🔊 100% Pure Internal Device Audio (Không mic, không tạp âm ngoài)
+- **Thu trực tiếp âm thanh phát ra trong máy**: Ứng dụng kết nối trực tiếp vào luồng xuất âm thanh hệ thống qua `AudioPlaybackCapture` (yêu cầu Android 10+).
+- **Loại bỏ hoàn toàn Micro**: Không thu bất kỳ âm thanh nào từ môi trường ngoài, người dùng nói chuyện bên ngoài không ảnh hưởng đến phụ đề, bảo mật 100% sự riêng tư.
+- **Tương thích hoàn hảo**: YouTube, TikTok, Facebook Reels, Netflix, Twitch, Game (PUBG, Genshin, v.v.), Podcast, Trình duyệt Web.
 
-### 3. 🪟 Interactive Floating Overlay Widget
-- **Dual Subtitle Display**:
-  - **Top Row**: Real-time speech transcript from internal audio/mic.
-  - **Bottom Row**: Instant Vietnamese translation.
-- **Dynamic Resizing**:
-  - **Cycle Presets (`⤢`)**: Toggle between Compact (270dp), Standard (340dp), and Full-width mode with automatic font scaling.
-  - **Freeform Corner Drag (`viewResizeCorner`)**: Drag the bottom-right handle to adjust overlay width smoothly.
-- **Minimization & Floating Bubble (`—`)**:
-  - Tap `—` to collapse into a floating circular bubble.
-  - Smooth dragging and tap-to-restore (<350ms click detection).
-- **Fast Language Swap (`⇄`)**: Invert translation direction on the fly.
-- **Touch-Conflict-Free Controls**: Control buttons have isolated touch targets with ripple effects, preventing accidental window dragging when pressing buttons.
-- **Single-Instance Enforcement**: Strict lifecycle management preventing duplicate overlay windows.
+> ⚠️ **Lưu ý về Discord / Cuộc gọi thoại VoIP**:
+> Hệ điều hành Android áp dụng chính sách bảo mật nghiêm ngặt (`USAGE_VOICE_COMMUNICATION`), tuyệt đối không cho phép bất kỳ ứng dụng thứ 3 nào được phép ghi lại luồng âm thanh đàm thoại cuộc gọi (Discord, Zalo Call, Messenger Call, Phone Call) qua giao thức chụp âm thanh hệ thống. Vì vậy ứng dụng được thiết kế tối ưu riêng biệt cho việc dịch âm thanh media/nội dung giải trí trong máy.
+
+### 2. 📜 Smart Rolling Subtitles & Neural Translation
+- **Phụ đề trượt thông minh (Rolling Subtitles)**: Câu nói dài không còn bị cắt bớt bằng dấu ba chấm `...`. Ứng dụng tự động giữ lại cụm từ mới nhất để bạn luôn đọc kịp dòng hội thoại đang diễn ra theo thời gian thực.
+- **Tự động ngắt và làm mới sau khoảng lặng (Auto Sentence Reset)**: Khi người nói dứt câu quá 4.5 giây, khung phụ đề tự động làm mới để đón nhận câu tiếp theo.
+- **Dịch tự nhiên theo ngữ cảnh (Neural GTX)**: Bản dịch tiếng Việt mượt mà, đúng văn phong tự nhiên thay vì dịch từng từ thô cứng.
+- **Cuộn phụ đề mượt mà**: Tích hợp thanh cuộn mượt cho phép xem lại toàn bộ câu dài.
+
+### 3. 🎨 Giao diện & Icon hiện đại mới (Modern Flat Aesthetic)
+- Logo và Icon ứng dụng được thiết kế lại tối giản, phẳng (flat design) với dải sóng âm hiện đại (Indigo-Violet), không còn hiệu ứng nhựa bóng neon cũ.
+
+### 4. 🪟 Khung phụ đề nổi (Floating Overlay Widget)
+- **Cửa sổ dịch 2 dòng**: Dòng trên hiển thị tiếng gốc nhận diện ngay lập tức; dòng dưới hiển thị bản dịch tiếng Việt.
+- **Nút đảo chiều ngôn ngữ nhanh (`⇄`)**: Đảo qua lại giữa Tiếng Anh ⇄ Tiếng Việt chỉ với 1 chạm.
+- **Nút phóng to / thu nhỏ (`⤢`) & Bong bóng nổi (`—`)**: Thu gọn thành bong bóng nhỏ khi không dùng đến, chạm vào để mở lại.
 
 ---
 

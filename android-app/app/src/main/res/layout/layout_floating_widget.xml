@@ -42,18 +42,6 @@
         </LinearLayout>
 
         <!-- Control buttons -->
-        <TextView
-            android:id="@+id/btnAudioSource"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:gravity="center"
-            android:text="🔊"
-            android:textColor="@color/accent"
-            android:textSize="14sp"
-            android:clickable="true"
-            android:focusable="true"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:layout_marginEnd="2dp" />
 
         <TextView
             android:id="@+id/btnSwapOverlay"

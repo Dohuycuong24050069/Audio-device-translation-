@@ -75,19 +75,11 @@ class AudioCaptureService : Service() {
     companion object {
         const val ACTION_START = "ACTION_START"
         const val ACTION_UPDATE_LANG = "ACTION_UPDATE_LANG"
-        const val ACTION_SWITCH_SOURCE = "ACTION_SWITCH_SOURCE"
 
         const val EXTRA_RESULT_CODE = "EXTRA_RESULT_CODE"
         const val EXTRA_RESULT_DATA = "EXTRA_RESULT_DATA"
         const val EXTRA_SRC_LANG = "EXTRA_SRC_LANG"
         const val EXTRA_TGT_LANG = "EXTRA_TGT_LANG"
-        const val EXTRA_AUDIO_SOURCE = "EXTRA_AUDIO_SOURCE"
-
-        const val SOURCE_INTERNAL = "SOURCE_INTERNAL"
-        const val SOURCE_SPEAKER = "SOURCE_SPEAKER"
-
-        var currentAudioSource: String = SOURCE_INTERNAL
-            private set
 
         private const val CHANNEL_ID = "AudioCaptureChannel"
         private const val NOTIFICATION_ID = 102
@@ -182,13 +174,7 @@ class AudioCaptureService : Service() {
         val notification = buildNotification()
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                var serviceType = 0
-                if (hasMediaProjection) {
-                    serviceType = serviceType or ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
-                }
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                    serviceType = serviceType or ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
-                }
+                val serviceType = if (hasMediaProjection) ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION else 0
                 if (serviceType != 0) {
                     startForeground(NOTIFICATION_ID, notification, serviceType)
                 } else {
@@ -211,8 +197,6 @@ class AudioCaptureService : Service() {
             ACTION_START -> {
                 srcLang = intent.getStringExtra(EXTRA_SRC_LANG) ?: "en"
                 tgtLang = intent.getStringExtra(EXTRA_TGT_LANG) ?: "vi"
-                val source = intent.getStringExtra(EXTRA_AUDIO_SOURCE) ?: SOURCE_INTERNAL
-                currentAudioSource = source
 
                 val resultCode = intent.getIntExtra(EXTRA_RESULT_CODE, Activity.RESULT_CANCELED)
                 val resultData: Intent? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -224,26 +208,6 @@ class AudioCaptureService : Service() {
 
                 if (resultCode == Activity.RESULT_OK && resultData != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     initMediaProjectionSafe(resultCode, resultData)
-                } else {
-                    startForegroundSafe(hasMediaProjection = false)
-                    startSpeakerphoneCapture()
-                }
-            }
-
-            ACTION_SWITCH_SOURCE -> {
-                val newSource = intent.getStringExtra(EXTRA_AUDIO_SOURCE)
-                    ?: if (currentAudioSource == SOURCE_INTERNAL) SOURCE_SPEAKER else SOURCE_INTERNAL
-                currentAudioSource = newSource
-                Log.d(TAG, "Chuyển đổi nguồn âm thanh: $currentAudioSource")
-                if (currentAudioSource == SOURCE_SPEAKER) {
-                    startSpeakerphoneCapture()
-                } else {
-                    if (mediaProjection != null) {
-                        startSystemAudioCapture()
-                    } else {
-                        currentAudioSource = SOURCE_SPEAKER
-                        startSpeakerphoneCapture()
-                    }
                 }
             }
 
@@ -272,21 +236,14 @@ class AudioCaptureService : Service() {
                 }
             }, Handler(Looper.getMainLooper()))
 
-            if (currentAudioSource == SOURCE_INTERNAL) {
-                startSystemAudioCapture()
-            } else {
-                startSpeakerphoneCapture()
-            }
+            startSystemAudioCapture()
         } catch (e: Exception) {
             Log.e(TAG, "Lỗi MediaProjection: ${e.message}", e)
         }
     }
 
     private fun startSystemAudioCapture() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || mediaProjection == null) {
-            startSpeakerphoneCapture()
-            return
-        }
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || mediaProjection == null) return
 
         stopCaptureLoop()
         stopAudioRecord()
@@ -318,7 +275,6 @@ class AudioCaptureService : Service() {
             if (audioRecord?.state != AudioRecord.STATE_INITIALIZED) {
                 audioRecord?.release()
                 audioRecord = null
-                startSpeakerphoneCapture()
                 return
             }
 
@@ -329,82 +285,10 @@ class AudioCaptureService : Service() {
                 runVoskAudioLoop()
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Lỗi tạo AudioRecord thiết bị: ${e.message}", e)
-            startSpeakerphoneCapture()
+            Log.e(TAG, "Lỗi tạo AudioRecord: ${e.message}", e)
         }
     }
 
-    /**
-     * Thu âm thanh Discord / Loa ngoài (Speakerphone Mode):
-     * - Android OS chặn AudioPlaybackCapture đối với VoIP/Discord (USAGE_VOICE_COMMUNICATION).
-     * - Chế độ này dùng VOICE_RECOGNITION/MIC trực tiếp thu âm thanh Discord đang phát ra loa ngoài điện thoại.
-     * - Tối ưu chống ồn và áp dụng gain nhẹ cho giọng nói trong trẻo.
-     */
-    private fun startSpeakerphoneCapture() {
-        stopCaptureLoop()
-        stopAudioRecord()
-
-        try {
-            val minBuffer = AudioRecord.getMinBufferSize(
-                SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT
-            )
-            val bufferSize = maxOf(minBuffer * 2, 4096)
-
-            var record: AudioRecord? = try {
-                AudioRecord(
-                    MediaRecorder.AudioSource.VOICE_RECOGNITION,
-                    SAMPLE_RATE,
-                    AudioFormat.CHANNEL_IN_MONO,
-                    AudioFormat.ENCODING_PCM_16BIT,
-                    bufferSize
-                )
-            } catch (e: Exception) {
-                null
-            }
-
-            if (record == null || record.state != AudioRecord.STATE_INITIALIZED) {
-                record?.release()
-                record = try {
-                    AudioRecord(
-                        MediaRecorder.AudioSource.VOICE_COMMUNICATION,
-                        SAMPLE_RATE,
-                        AudioFormat.CHANNEL_IN_MONO,
-                        AudioFormat.ENCODING_PCM_16BIT,
-                        bufferSize
-                    )
-                } catch (e: Exception) {
-                    null
-                }
-            }
-
-            if (record == null || record.state != AudioRecord.STATE_INITIALIZED) {
-                record?.release()
-                record = AudioRecord(
-                    MediaRecorder.AudioSource.MIC,
-                    SAMPLE_RATE,
-                    AudioFormat.CHANNEL_IN_MONO,
-                    AudioFormat.ENCODING_PCM_16BIT,
-                    bufferSize
-                )
-            }
-
-            if (record.state != AudioRecord.STATE_INITIALIZED) {
-                record.release()
-                Log.e(TAG, "Lỗi: Không thể khởi tạo AudioRecord loa ngoài")
-                return
-            }
-
-            audioRecord = record
-            audioRecord!!.startRecording()
-            Log.d(TAG, "✅ Bắt đầu thu âm Discord / Loa ngoài (VOICE_RECOGNITION/MIC)")
-
-            captureJob = serviceScope.launch(Dispatchers.IO) {
-                runVoskAudioLoop()
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Lỗi startSpeakerphoneCapture: ${e.message}", e)
-        }
-    }
 
     /**
      * Vòng lặp đọc âm thanh siêu nhạy:
@@ -432,10 +316,7 @@ class AudioCaptureService : Service() {
 
             var byteIdx = 0
             for (i in 0 until shortsRead) {
-                var s = readBuffer[i].toInt()
-                if (currentAudioSource == SOURCE_SPEAKER) {
-                    s = (s * 1.4f).toInt().coerceIn(-32768, 32767)
-                }
+                val s = readBuffer[i].toInt()
                 pcmBytes[byteIdx++] = (s and 0xFF).toByte()
                 pcmBytes[byteIdx++] = ((s shr 8) and 0xFF).toByte()
             }
