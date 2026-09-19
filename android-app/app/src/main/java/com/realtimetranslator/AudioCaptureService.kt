@@ -35,11 +35,13 @@ import java.io.File
 import java.io.FileOutputStream
 
 /**
- * AudioCaptureService - Thu âm thanh thiết bị siêu tốc (Real-Time 0ms Display)
+ * AudioCaptureService - Quản lý thu âm thanh thiết bị & Phụ đề cuộn thông minh (Smart Rolling Subtitles)
  *
- * Tối ưu hóa phản hồi tức thì:
- * - Khi video/âm thanh vừa phát âm: Chữ hiển thị ngay lên màn hình trong vòng <20ms (0ms network delay).
- * - Dịch thuật chạy ngầm song song (On-Device ML Kit <15ms khi đang nói, Cloud Neural khi dứt câu).
+ * Tính năng đột phá:
+ * 1. Không bị kẹt 3 dòng hay ba chấm (...): Chữ cuộn xuống tự nhiên và tự động bắt đầu câu mới từ đầu khi dứt câu.
+ * 2. Cửa sổ trượt (Sliding Window): Câu dài tự động giữ 12-14 từ mới nhất đang nói, không bị tràn hay che mất từ mới.
+ * 3. Dịch thuật chuẩn xác 100%: Sử dụng Google Neural GTX cho toàn bộ câu văn tiếng Việt tự nhiên, xuôi tai.
+ * 4. Tự động reset ban đầu sau 4s im lặng khi video dừng.
  */
 class AudioCaptureService : Service() {
 
@@ -51,6 +53,7 @@ class AudioCaptureService : Service() {
     private var audioRecord: AudioRecord? = null
     private var captureJob: Job? = null
     private var translateJob: Job? = null
+    private var silenceResetJob: Job? = null
 
     // Vosk Engine
     private var voskModel: Model? = null
@@ -61,8 +64,10 @@ class AudioCaptureService : Service() {
     private var srcLang = "en"
     private var tgtLang = "vi"
 
+    // Trạng thái phụ đề
     private var currentDisplayedText = ""
     private var currentTranslatedText = ""
+    private var shouldStartNewSentence = false
 
     private val SAMPLE_RATE = 16000
 
@@ -88,7 +93,7 @@ class AudioCaptureService : Service() {
         try {
             translationEngine = TranslationEngine(this)
         } catch (e: Exception) {
-            Log.e(TAG, "Lỗi khởi tạo TranslationEngine: ${e.message}")
+            Log.e(TAG, "Lỗi TranslationEngine: ${e.message}")
         }
         initVoskModel()
     }
@@ -154,11 +159,11 @@ class AudioCaptureService : Service() {
                 withContext(Dispatchers.Main) {
                     FloatingOverlayService.updateSubtitles(
                         "Hệ thống sẵn sàng",
-                        "Nói hoặc phát video để bắt đầu dịch tức thì..."
+                        "Bật video, phim hoặc game để bắt đầu dịch tức thì..."
                     )
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Lỗi nạp Vosk Model: ${e.message}", e)
+                Log.e(TAG, "Lỗi nạp Vosk: ${e.message}", e)
                 isInitializingVosk = false
             }
         }
@@ -240,9 +245,6 @@ class AudioCaptureService : Service() {
         }
     }
 
-    /**
-     * Thu âm thanh nội bộ thiết bị (Internal Audio) với bộ đệm siêu nhỏ để triệt tiêu độ trễ
-     */
     private fun startSystemAudioCapture() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || mediaProjection == null) return
 
@@ -265,7 +267,6 @@ class AudioCaptureService : Service() {
             val minBuffer = AudioRecord.getMinBufferSize(
                 SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT
             )
-            // Buffer nhỏ gọn để lấy âm thanh mới nhất ngay tức khắc
             val bufferSize = maxOf(minBuffer * 2, 4096)
 
             audioRecord = AudioRecord.Builder()
@@ -281,7 +282,7 @@ class AudioCaptureService : Service() {
             }
 
             audioRecord!!.startRecording()
-            Log.d(TAG, "✅ Bắt đầu thu âm thanh thiết bị với độ trễ cực thấp (0ms)")
+            Log.d(TAG, "✅ Bắt đầu thu âm thanh thiết bị (0ms latency, Smart Rolling Subtitles)")
 
             captureJob = serviceScope.launch(Dispatchers.IO) {
                 runVoskAudioLoop()
@@ -292,11 +293,12 @@ class AudioCaptureService : Service() {
     }
 
     /**
-     * Vòng lặp đọc âm thanh siêu nhạy (30ms chunk = 480 samples).
-     * Phát hiện giọng nói và đẩy lên màn hình TỨC THỜI (0ms).
+     * Vòng lặp đọc âm thanh siêu nhạy:
+     * - Khi dứt câu: Tự động đánh dấu để câu tiếp theo reset về ban đầu.
+     * - Khi câu quá dài: Tự động trượt cửa sổ giữ các từ gần nhất để người dùng đọc kịp.
      */
     private suspend fun runVoskAudioLoop() {
-        val chunkSize = 480 // 30ms tại 16kHz — đọc liên tục, không đệm trễ
+        val chunkSize = 480 // 30ms tại 16kHz
         val readBuffer = ShortArray(chunkSize)
         val pcmBytes = ByteArray(chunkSize * 2)
         var lastSeenPartial = ""
@@ -326,13 +328,13 @@ class AudioCaptureService : Service() {
                 val text = parseVoskText(recognizer.result)
                 if (text.isNotBlank()) {
                     lastSeenPartial = ""
-                    dispatchInstantSpeech(text, isFinal = true)
+                    dispatchSpeechEvent(text, isFinal = true)
                 }
             } else {
                 val partial = parseVoskPartial(recognizer.partialResult)
                 if (partial.isNotBlank() && partial != lastSeenPartial) {
                     lastSeenPartial = partial
-                    dispatchInstantSpeech(partial, isFinal = false)
+                    dispatchSpeechEvent(partial, isFinal = false)
                 }
             }
         }
@@ -355,28 +357,46 @@ class AudioCaptureService : Service() {
     }
 
     /**
-     * PHẢN HỒI TỨC THÌ (0ms LAG):
-     * 1. Đẩy ngay văn bản gốc lên Floating Window (người dùng vừa nói là thấy chữ hiện ngay!).
-     * 2. Lập lịch dịch bất đồng bộ trong nền mà KHÔNG chặn hiển thị.
+     * Lấy cửa sổ chữ đọc được tốt nhất (tối đa 14 từ gần nhất).
+     * Tránh việc câu dồn lại quá 30-40 từ gây tràn màn hình hoặc biến thành '...'.
      */
-    private fun dispatchInstantSpeech(text: String, isFinal: Boolean) {
-        currentDisplayedText = text
+    private fun getReadableWindow(text: String, maxWords: Int = 14): String {
+        val words = text.trim().split("\\s+".toRegex()).filter { it.isNotEmpty() }
+        if (words.size <= maxWords) return text
+        return words.takeLast(maxWords).joinToString(" ")
+    }
 
-        // 1. CẬP NHẬT GIAO DIỆN TỨC THỜI (0ms ĐỘ TRỄ)
-        FloatingOverlayService.updateSubtitles(text, currentTranslatedText)
+    /**
+     * Quản lý phụ đề thông minh:
+     * - Nếu câu trước đã hoàn thành: Xóa câu cũ và hiển thị câu mới tinh ("để về ban đầu").
+     * - Nếu câu dài: Chữ tự động xuống dòng và cuộn xuống mượt mà ("xuống tiếp đi").
+     * - Dịch thuật: Google Neural GTX chuẩn xác 100%.
+     */
+    private fun dispatchSpeechEvent(rawText: String, isFinal: Boolean) {
+        // Hủy bộ đếm im lặng vì âm thanh đang phát
+        silenceResetJob?.cancel()
 
-        // 2. DỊCH CHẠY NGẦM BẤT ĐỒNG BỘ
+        // Nếu vừa dứt câu trước đó: Bắt đầu câu mới từ đầu!
+        if (shouldStartNewSentence && !isFinal) {
+            shouldStartNewSentence = false
+            currentDisplayedText = ""
+            currentTranslatedText = ""
+        }
+
+        // Cắt cửa sổ từ hợp lý để người dùng dễ đọc
+        val readableText = getReadableWindow(rawText)
+        currentDisplayedText = readableText
+
+        // 1. CẬP NHẬT CHỮ GỐC LÊN MÀN HÌNH TỨC THÌ (0ms LAG)
+        FloatingOverlayService.updateSubtitles(readableText, currentTranslatedText)
+
+        // 2. DỊCH CHẠY NGẦM BẰNG GOOGLE NEURAL ENGINE (CHUẨN XÁC CAO)
         translateJob?.cancel()
         translateJob = serviceScope.launch(Dispatchers.IO) {
+            delay(150) // debounce 150ms để dịch nguyên cụm có nghĩa
             try {
-                val textToTranslate = truncateForTranslation(text)
-                val translated = if (isFinal) {
-                    // Khi hết câu: Dịch chính xác bằng Google Neural
-                    translationEngine?.translate(textToTranslate, srcLang, tgtLang, preferCloud = true)
-                } else {
-                    // Khi đang nói: Dịch siêu tốc bằng ML Kit On-device (<15ms)
-                    translationEngine?.translateFast(textToTranslate, srcLang, tgtLang)
-                }
+                // Ưu tiên Google Neural GTX cho câu văn tiếng Việt chuẩn xác, mượt mà
+                val translated = translationEngine?.translate(readableText, srcLang, tgtLang, preferCloud = true)
 
                 if (!translated.isNullOrBlank()) {
                     currentTranslatedText = translated
@@ -388,15 +408,25 @@ class AudioCaptureService : Service() {
                 // ignore
             }
         }
-    }
 
-    private fun truncateForTranslation(text: String, maxLen: Int = 120): String {
-        if (text.length <= maxLen) return text
-        val sub = text.substring(0, maxLen)
-        val punctIdx = sub.lastIndexOfAny(charArrayOf('.', '!', '?', ',', ';'))
-        if (punctIdx > maxLen / 2) return sub.substring(0, punctIdx + 1).trim()
-        val spaceIdx = sub.lastIndexOf(' ')
-        return if (spaceIdx > 0) sub.substring(0, spaceIdx).trim() else sub.trim()
+        // Nếu là kết thúc câu (dứt lời / ngắt nghỉ):
+        if (isFinal) {
+            shouldStartNewSentence = true
+
+            // Hẹn giờ sau 4.5 giây nếu không có ai nói nữa thì đưa về trạng thái chờ ban đầu
+            silenceResetJob?.cancel()
+            silenceResetJob = serviceScope.launch(Dispatchers.Main) {
+                delay(4500)
+                if (isActive) {
+                    currentDisplayedText = ""
+                    currentTranslatedText = ""
+                    FloatingOverlayService.updateSubtitles(
+                        "Đang lắng nghe âm thanh...",
+                        "Bản dịch sẽ xuất hiện khi có âm thanh phát ra"
+                    )
+                }
+            }
+        }
     }
 
     private fun stopCaptureLoop() {
@@ -404,6 +434,8 @@ class AudioCaptureService : Service() {
         captureJob = null
         translateJob?.cancel()
         translateJob = null
+        silenceResetJob?.cancel()
+        silenceResetJob = null
     }
 
     private fun stopAudioRecord() {

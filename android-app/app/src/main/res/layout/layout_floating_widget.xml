@@ -103,81 +103,95 @@
         android:background="@color/divider_color"
         android:layout_marginBottom="9dp" />
 
-    <!-- Row 1: Original transcript -->
-    <LinearLayout
+    <!-- Scrollable Subtitles Container -->
+    <ScrollView
+        android:id="@+id/scrollSubtitleArea"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="top">
+        android:scrollbars="none"
+        android:overScrollMode="never"
+        android:fillViewport="true">
 
-        <TextView
-            android:id="@+id/tvOriginalTag"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="EN"
-            android:textSize="9sp"
-            android:textStyle="bold"
-            android:textColor="@color/accent"
-            android:background="@drawable/bg_lang_tag"
-            android:paddingHorizontal="7dp"
-            android:paddingVertical="3dp"
-            android:layout_marginEnd="8dp"
-            android:layout_marginTop="2dp" />
+            android:orientation="vertical">
 
-        <TextView
-            android:id="@+id/tvOriginalText"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/waiting_audio"
-            android:textColor="@color/text_primary"
-            android:textSize="14.5sp"
-            android:textStyle="bold"
-            android:maxLines="3"
-            android:ellipsize="end"
-            android:lineSpacingExtra="2dp" />
-    </LinearLayout>
+            <!-- Row 1: Original transcript -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="top">
 
-    <!-- Divider -->
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="@color/divider_color"
-        android:layout_marginVertical="8dp" />
+                <TextView
+                    android:id="@+id/tvOriginalTag"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="EN"
+                    android:textSize="9sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/accent"
+                    android:background="@drawable/bg_lang_tag"
+                    android:paddingHorizontal="7dp"
+                    android:paddingVertical="3dp"
+                    android:layout_marginEnd="8dp"
+                    android:layout_marginTop="2dp" />
 
-    <!-- Row 2: Translated text -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="top">
+                <TextView
+                    android:id="@+id/tvOriginalText"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/waiting_audio"
+                    android:textColor="@color/text_primary"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:maxLines="8"
+                    android:lineSpacingExtra="3dp" />
+            </LinearLayout>
 
-        <TextView
-            android:id="@+id/tvTranslatedTag"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="VI"
-            android:textSize="9sp"
-            android:textStyle="bold"
-            android:textColor="@color/text_accent"
-            android:background="@drawable/bg_lang_tag"
-            android:paddingHorizontal="7dp"
-            android:paddingVertical="3dp"
-            android:layout_marginEnd="8dp"
-            android:layout_marginTop="2dp" />
+            <!-- Divider -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/divider_color"
+                android:layout_marginVertical="8dp" />
 
-        <TextView
-            android:id="@+id/tvTranslatedText"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Bản dịch xuất hiện tại đây..."
-            android:textColor="@color/text_accent"
-            android:textSize="14.5sp"
-            android:maxLines="4"
-            android:ellipsize="end"
-            android:lineSpacingExtra="2dp" />
-    </LinearLayout>
+            <!-- Row 2: Translated text -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="top">
+
+                <TextView
+                    android:id="@+id/tvTranslatedTag"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="VI"
+                    android:textSize="9sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/text_accent"
+                    android:background="@drawable/bg_lang_tag"
+                    android:paddingHorizontal="7dp"
+                    android:paddingVertical="3dp"
+                    android:layout_marginEnd="8dp"
+                    android:layout_marginTop="2dp" />
+
+                <TextView
+                    android:id="@+id/tvTranslatedText"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Bản dịch xuất hiện tại đây..."
+                    android:textColor="@color/text_accent"
+                    android:textSize="14sp"
+                    android:maxLines="8"
+                    android:lineSpacingExtra="3dp" />
+            </LinearLayout>
+        </LinearLayout>
+    </ScrollView>
 
     <!-- Resize corner -->
     <LinearLayout

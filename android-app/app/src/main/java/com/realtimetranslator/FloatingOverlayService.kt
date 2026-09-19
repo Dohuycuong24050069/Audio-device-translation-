@@ -38,6 +38,7 @@ class FloatingOverlayService : Service() {
     private var tvTranslated: TextView? = null
     private var tvOriginalTag: TextView? = null
     private var tvTranslatedTag: TextView? = null
+    private var scrollSubtitleArea: android.widget.ScrollView? = null
     private var isOverlayAdded = false
     private var isBubbleAdded = false
     private var currentSizeLevel = 1 // 0: Nhỏ, 1: Vừa, 2: Lớn
@@ -69,6 +70,9 @@ class FloatingOverlayService : Service() {
                 service.tvOriginal?.post {
                     if (orig.isNotEmpty()) service.tvOriginal?.text = orig
                     if (!trans.isNullOrEmpty()) service.tvTranslated?.text = trans
+                    service.scrollSubtitleArea?.post {
+                        service.scrollSubtitleArea?.fullScroll(View.FOCUS_DOWN)
+                    }
                 }
             }
         }
@@ -168,6 +172,7 @@ class FloatingOverlayService : Service() {
             tvTranslated = floatingView?.findViewById(R.id.tvTranslatedText)
             tvOriginalTag = floatingView?.findViewById(R.id.tvOriginalTag)
             tvTranslatedTag = floatingView?.findViewById(R.id.tvTranslatedTag)
+            scrollSubtitleArea = floatingView?.findViewById(R.id.scrollSubtitleArea)
 
             setupFloatingInteractions()
             setupBubbleInteractions()
