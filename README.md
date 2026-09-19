@@ -12,20 +12,16 @@ A high-performance Android application for **Real-Time Internal Device Audio Tra
 
 Powered by **Vosk Offline Speech-to-Text (STT)** and **Google Neural & ML Kit Translation** — **100% Free Forever, No Ambient Noise, Pure Internal Audio**.
 
-> 📥 **Direct APK Download**: **[TransLive_v1.0.5.apk (v1.0.5)](https://github.com/Dohuycuong24050069/Audio-device-translation-/releases/latest)** (~144 MB, Ready to install on Android).
+> 📥 **Direct APK Download**: **[TransLive_v1.0.6.apk (v1.0.6)](https://github.com/Dohuycuong24050069/Audio-device-translation-/releases/latest)** (~144 MB, Ready to install on Android).
 
 ---
 
 ## ✨ Key Features
 
-### 1. 🧠 High-Accuracy Speech Recognition & Neural Translation
-- **Vosk AI STT (50ms Low-Latency)**: Bundles the `vosk-model-small-en-us-0.15` model directly inside Android assets. Samples audio at 16 kHz Mono PCM using an optimized 800-sample buffer with 0ms Garbage Collection pause.
-- **Enhanced Neural Translation**: Integrates Google Neural Translation Engine for natural, fluent, and highly accurate Vietnamese phrasing, with Google ML Kit On-Device translation as offline fallback when disconnected.
-- **Auto-Formatting & Debounce**: Intelligently capitalizes clauses and formats partial transcripts for maximum translation accuracy.
-
-### 2. 🔊 100% Pure Internal Device Audio Capture (Android 10+)
-- **Internal Audio Only**: Exclusively utilizes `AudioPlaybackCaptureConfiguration` with `MediaProjection` to capture clean internal audio from YouTube, TikTok, podcasts, Netflix, and games.
-- **Zero Background/Mic Noise**: Completely bypasses the microphone, ensuring 100% clean sound from media without ambient interference or echo.
+### 1. 🎙️ Dual Audio Modes: Internal Media & Discord / Speakerphone
+- **🔊 Mode 1: Âm thanh trong máy (Internal Audio)**: Thu trực tiếp luồng âm thanh kỹ thuật số sạch sẽ từ YouTube, TikTok, Netflix, Game qua `AudioPlaybackCapture` (Android 10+). Không lẫn tạp âm môi trường bên ngoài.
+- **🎙️ Mode 2: Discord & Loa ngoài (Speakerphone Mode)**: Khắc phục giới hạn bảo mật cuộc gọi của Android (Android chặn thu nội bộ cuộc gọi thoại Discord/VoIP). Chế độ này sử dụng engine `VOICE_RECOGNITION` lọc ồn chuyên biệt để thu âm thanh giọng nói phát ra trực tiếp từ loa ngoài của điện thoại khi đàm thoại Discord hoặc nghe gọi video.
+- **Chuyển đổi 1 chạm (🔊 ⇄ 🎙️)**: Nút chuyển nguồn âm thanh tích hợp trực tiếp ngay trên thanh tiêu đề của khung phụ đề nổi, chuyển đổi nguồn thu tức thì không cần thoát Discord.
 
 ### 3. 🪟 Interactive Floating Overlay Widget
 - **Dual Subtitle Display**:

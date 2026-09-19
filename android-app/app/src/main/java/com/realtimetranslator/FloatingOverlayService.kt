@@ -334,6 +334,39 @@ class FloatingOverlayService : Service() {
             }
             startService(intent)
         }
+
+        // Chuyển đổi nguồn âm thanh nhanh: Âm thanh máy (🔊) <-> Discord / Loa ngoài (🎙️)
+        val btnAudioSource = floatingView?.findViewById<TextView>(R.id.btnAudioSource)
+        btnAudioSource?.text = if (AudioCaptureService.currentAudioSource == AudioCaptureService.SOURCE_SPEAKER) "🎙️" else "🔊"
+        btnAudioSource?.setOnClickListener {
+            val newSource = if (AudioCaptureService.currentAudioSource == AudioCaptureService.SOURCE_INTERNAL) {
+                AudioCaptureService.SOURCE_SPEAKER
+            } else {
+                AudioCaptureService.SOURCE_INTERNAL
+            }
+
+            val intent = Intent(this, AudioCaptureService::class.java).apply {
+                action = AudioCaptureService.ACTION_SWITCH_SOURCE
+                putExtra(AudioCaptureService.EXTRA_AUDIO_SOURCE, newSource)
+            }
+            startService(intent)
+
+            if (newSource == AudioCaptureService.SOURCE_SPEAKER) {
+                btnAudioSource.text = "🎙️"
+                android.widget.Toast.makeText(
+                    this,
+                    "🎙️ Chế độ: Discord / Loa ngoài\n(Bật loa ngoài Discord để thu tiếng nói)",
+                    android.widget.Toast.LENGTH_LONG
+                ).show()
+            } else {
+                btnAudioSource.text = "🔊"
+                android.widget.Toast.makeText(
+                    this,
+                    "🔊 Chế độ: Âm thanh trong máy\n(YouTube, TikTok, Netflix, Game)",
+                    android.widget.Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
     }
 
     private fun setupBubbleInteractions() {
