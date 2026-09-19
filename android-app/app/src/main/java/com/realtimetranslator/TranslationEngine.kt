@@ -26,6 +26,11 @@ class TranslationEngine(private val context: Context) {
     private var isEnToViReady = false
     private var isViToEnReady = false
 
+    // Cache đơn giản LRU (50 entry) — tránh dịch lại câu đã dịch rồi (giảm 0ms lag cho câu lặp)
+    private val translationCache = object : LinkedHashMap<String, String>(64, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, String>?) = size > 50
+    }
+
     init {
         initTranslators()
     }
@@ -72,7 +77,13 @@ class TranslationEngine(private val context: Context) {
      */
     suspend fun translate(text: String, sourceLang: String, targetLang: String): String = withContext(Dispatchers.IO) {
         val trimmed = text.trim()
-        if (trimmed.isBlank()) return@withContext ""
+        if (trimmed.isBlank() || trimmed.length < 3) return@withContext ""
+
+        // Kiểm tra cache trước — nếu đã dịch rồi thì trả ngay (0ms lag)
+        val cacheKey = "${sourceLang}>${targetLang}:${trimmed}"
+        synchronized(translationCache) {
+            translationCache[cacheKey]?.let { return@withContext it }
+        }
 
         val isEnToVi = sourceLang.lowercase().startsWith("en")
         val translator = if (isEnToVi) enToViTranslator else viToEnTranslator
@@ -81,7 +92,9 @@ class TranslationEngine(private val context: Context) {
         // 1. Nếu ML Kit on-device đã sẵn sàng, dịch trực tiếp offline
         if (isReady && translator != null) {
             try {
-                return@withContext translator.translate(trimmed).await()
+                val result = translator.translate(trimmed).await()
+                synchronized(translationCache) { translationCache[cacheKey] = result }
+                return@withContext result
             } catch (e: Exception) {
                 Log.w(TAG, "ML Kit dịch lỗi, chuyển sang fallback: ${e.message}")
             }
@@ -94,8 +107,8 @@ class TranslationEngine(private val context: Context) {
             val encoded = java.net.URLEncoder.encode(trimmed, "UTF-8")
             val urlString = "https://api.mymemory.translated.net/get?q=$encoded&langpair=$src|$tgt"
             val connection = java.net.URL(urlString).openConnection() as java.net.HttpURLConnection
-            connection.connectTimeout = 4000
-            connection.readTimeout = 4000
+            connection.connectTimeout = 2000  // Giảm từ 4000ms xuống 2000ms — fail nhanh hơn, ít block
+            connection.readTimeout = 2000
             connection.requestMethod = "GET"
 
             if (connection.responseCode == 200) {
@@ -104,7 +117,10 @@ class TranslationEngine(private val context: Context) {
                 if (json.optInt("responseStatus") == 200) {
                     val resData = json.optJSONObject("responseData")
                     val result = resData?.optString("translatedText") ?: ""
-                    if (result.isNotBlank()) return@withContext result
+                    if (result.isNotBlank()) {
+                        synchronized(translationCache) { translationCache[cacheKey] = result }
+                        return@withContext result
+                    }
                 }
             }
         } catch (e: Exception) {

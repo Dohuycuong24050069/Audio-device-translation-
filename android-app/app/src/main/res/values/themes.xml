@@ -1,10 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.RealtimeTranslator" parent="Theme.Material3.Dark.NoActionBar">
-        <item name="colorPrimary">@color/primary</item>
-        <item name="colorSecondary">@color/accent</item>
-        <item name="android:statusBarColor">@color/bg_dark</item>
-        <item name="android:navigationBarColor">@color/bg_dark</item>
-        <item name="android:windowBackground">@color/bg_dark</item>
+        <item name="colorPrimary">#6366F1</item>
+        <item name="colorPrimaryVariant">#4F46E5</item>
+        <item name="colorSecondary">#818CF8</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="android:statusBarColor">#06080F</item>
+        <item name="android:navigationBarColor">#06080F</item>
+        <item name="android:windowBackground">#06080F</item>
+        <!-- Switch thumb/track tint to indigo -->
+        <item name="colorControlActivated">#6366F1</item>
+        <!-- SeekBar -->
+        <item name="colorControlHighlight">#266366F1</item>
     </style>
 </resources>

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Realtime Translator</string>
+    <string name="app_name">TransLive</string>
     <string name="start_service">Bắt đầu dịch</string>
     <string name="stop_service">Dừng dịch</string>
     <string name="swap_languages">Đảo chiều ngôn ngữ</string>

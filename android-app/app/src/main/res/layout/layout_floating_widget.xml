@@ -1,13 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/layoutFloatingRoot"
     android:layout_width="320dp"
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:background="@drawable/bg_floating_card"
     android:padding="12dp">
 
-    <!-- Header bar (Thanh kéo thả + Điều khiển) -->
+    <!-- Header: drag handle + controls -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -15,7 +14,7 @@
         android:gravity="center_vertical"
         android:paddingBottom="8dp">
 
-        <!-- Vùng kéo thả riêng: Chỉ title và thanh tiêu đề, không đè lên các nút bấm -->
+        <!-- Brand & drag area -->
         <LinearLayout
             android:id="@+id/layoutDragHandle"
             android:layout_width="0dp"
@@ -24,24 +23,33 @@
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
+            <!-- Live dot -->
+            <View
+                android:layout_width="6dp"
+                android:layout_height="6dp"
+                android:background="@drawable/bg_status_dot"
+                android:backgroundTint="@color/status_ok"
+                android:layout_marginEnd="6dp" />
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="● LIVE TRANSLATE"
-                android:textColor="@color/primary"
-                android:textSize="11sp"
+                android:text="LIVE SUBTITLES"
+                android:textColor="@color/accent"
+                android:textSize="10sp"
                 android:textStyle="bold"
-                android:letterSpacing="0.08" />
+                android:letterSpacing="0.06" />
         </LinearLayout>
 
+        <!-- Control buttons -->
         <TextView
             android:id="@+id/btnSwapOverlay"
-            android:layout_width="34dp"
-            android:layout_height="34dp"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
             android:gravity="center"
             android:text="⇄"
             android:textColor="@color/text_secondary"
-            android:textSize="15sp"
+            android:textSize="14sp"
             android:clickable="true"
             android:focusable="true"
             android:background="?attr/selectableItemBackgroundBorderless"
@@ -49,12 +57,12 @@
 
         <TextView
             android:id="@+id/btnResizeOverlay"
-            android:layout_width="34dp"
-            android:layout_height="34dp"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
             android:gravity="center"
             android:text="⤢"
             android:textColor="@color/text_secondary"
-            android:textSize="15sp"
+            android:textSize="14sp"
             android:clickable="true"
             android:focusable="true"
             android:background="?attr/selectableItemBackgroundBorderless"
@@ -62,12 +70,12 @@
 
         <TextView
             android:id="@+id/btnMinimize"
-            android:layout_width="34dp"
-            android:layout_height="34dp"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
             android:gravity="center"
             android:text="—"
             android:textColor="@color/text_secondary"
-            android:textSize="16sp"
+            android:textSize="15sp"
             android:textStyle="bold"
             android:clickable="true"
             android:focusable="true"
@@ -76,25 +84,26 @@
 
         <TextView
             android:id="@+id/btnCloseOverlay"
-            android:layout_width="34dp"
-            android:layout_height="34dp"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
             android:gravity="center"
             android:text="✕"
-            android:textColor="@color/red"
-            android:textSize="15sp"
+            android:textColor="@color/status_danger"
+            android:textSize="13sp"
             android:textStyle="bold"
             android:clickable="true"
             android:focusable="true"
             android:background="?attr/selectableItemBackgroundBorderless" />
     </LinearLayout>
 
+    <!-- Divider -->
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:background="@color/divider_color"
-        android:layout_marginBottom="8dp" />
+        android:layout_marginBottom="9dp" />
 
-    <!-- DÒNG 1: Tiếng gốc nhận diện theo thời gian thực -->
+    <!-- Row 1: Original transcript -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -105,13 +114,13 @@
             android:id="@+id/tvOriginalTag"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="🇺🇸 EN"
-            android:textSize="10sp"
+            android:text="EN"
+            android:textSize="9sp"
             android:textStyle="bold"
-            android:textColor="@color/primary"
+            android:textColor="@color/accent"
             android:background="@drawable/bg_lang_tag"
-            android:paddingHorizontal="6dp"
-            android:paddingVertical="2dp"
+            android:paddingHorizontal="7dp"
+            android:paddingVertical="3dp"
             android:layout_marginEnd="8dp"
             android:layout_marginTop="2dp" />
 
@@ -122,20 +131,21 @@
             android:layout_weight="1"
             android:text="@string/waiting_audio"
             android:textColor="@color/text_primary"
-            android:textSize="15sp"
+            android:textSize="14.5sp"
             android:textStyle="bold"
             android:maxLines="3"
             android:ellipsize="end"
-            android:lineSpacingExtra="3dp" />
+            android:lineSpacingExtra="2dp" />
     </LinearLayout>
 
+    <!-- Divider -->
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:background="@color/divider_color"
         android:layout_marginVertical="8dp" />
 
-    <!-- DÒNG 2: Tiếng dịch hiển thị tức thì -->
+    <!-- Row 2: Translated text -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -146,13 +156,13 @@
             android:id="@+id/tvTranslatedTag"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="🇻🇳 VI"
-            android:textSize="10sp"
+            android:text="VI"
+            android:textSize="9sp"
             android:textStyle="bold"
-            android:textColor="@color/text_green"
+            android:textColor="@color/text_accent"
             android:background="@drawable/bg_lang_tag"
-            android:paddingHorizontal="6dp"
-            android:paddingVertical="2dp"
+            android:paddingHorizontal="7dp"
+            android:paddingVertical="3dp"
             android:layout_marginEnd="8dp"
             android:layout_marginTop="2dp" />
 
@@ -161,15 +171,15 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Bản dịch sẽ xuất hiện tại đây..."
-            android:textColor="@color/text_green"
-            android:textSize="15sp"
+            android:text="Bản dịch xuất hiện tại đây..."
+            android:textColor="@color/text_accent"
+            android:textSize="14.5sp"
             android:maxLines="4"
             android:ellipsize="end"
-            android:lineSpacingExtra="3dp" />
+            android:lineSpacingExtra="2dp" />
     </LinearLayout>
 
-    <!-- Thanh kéo chỉnh kích cỡ góc dưới cùng bên phải -->
+    <!-- Resize corner -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -179,12 +189,12 @@
 
         <TextView
             android:id="@+id/viewResizeCorner"
-            android:layout_width="28dp"
-            android:layout_height="22dp"
+            android:layout_width="26dp"
+            android:layout_height="20dp"
             android:gravity="end|bottom"
             android:text="⤡"
             android:textColor="@color/text_muted"
-            android:textSize="14sp"
+            android:textSize="13sp"
             android:paddingEnd="2dp" />
     </LinearLayout>
 

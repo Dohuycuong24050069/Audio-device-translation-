@@ -277,14 +277,14 @@ class MainActivity : AppCompatActivity() {
         if (isServiceRunning) {
             binding.btnToggleService.text = "⏹  Dừng dịch"
             binding.btnToggleService.setBackgroundColor(
-                ContextCompat.getColor(this, android.R.color.holo_red_dark)
+                ContextCompat.getColor(this, R.color.status_danger)
             )
             binding.tvStatus.text = "🟢 Đang dịch real-time • Cửa sổ nổi đang hiển thị"
             binding.cardStatus.visibility = View.VISIBLE
         } else {
             binding.btnToggleService.text = "▶  Bắt đầu dịch"
             binding.btnToggleService.setBackgroundColor(
-                ContextCompat.getColor(this, android.R.color.holo_blue_dark)
+                ContextCompat.getColor(this, R.color.primary)
             )
             binding.tvStatus.text = "⚪ Chưa khởi động"
             binding.cardStatus.visibility = View.VISIBLE

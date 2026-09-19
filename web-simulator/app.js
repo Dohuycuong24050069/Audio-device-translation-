@@ -142,16 +142,32 @@ async function translateText(text, srcLang, tgtLang) {
   const langPair = `${srcLang}|${tgtLang}`;
   const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${langPair}`;
   try {
-    const res = await fetch(url);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 2500); // timeout 2.5s — fail nhanh hơn
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeout);
     const data = await res.json();
     if (data.responseStatus === 200) {
       return data.responseData.translatedText || '';
     }
     return '[Lỗi dịch]';
   } catch (e) {
+    if (e.name === 'AbortError') return '[Quá thời gian]';
     console.error('Translation error:', e);
-    return '[Không có kết nối]';
+    return '[Đang offline]';
   }
+}
+
+/**
+ * Cắt câu dài tại ranh giới dấu câu / từ — tránh gửi đoạn quá dài cho API (giảm lag)
+ */
+function truncateForTranslation(text, maxLen = 120) {
+  if (text.length <= maxLen) return text;
+  const sub = text.substring(0, maxLen);
+  const punctIdx = Math.max(sub.lastIndexOf('.'), sub.lastIndexOf('!'), sub.lastIndexOf('?'), sub.lastIndexOf(','), sub.lastIndexOf(';'));
+  if (punctIdx > maxLen / 2) return sub.substring(0, punctIdx + 1).trim();
+  const spaceIdx = sub.lastIndexOf(' ');
+  return spaceIdx > 0 ? sub.substring(0, spaceIdx).trim() : sub.trim();
 }
 
 // =====================================================
@@ -248,7 +264,9 @@ function setupSpeechRecognition() {
       setStatus('translating', '🔄 Đang dịch...');
       state.latencyStart = performance.now();
 
-      const translated = await translateText(state.currentOriginal, state.langSource, state.langTarget);
+      // Cắt câu dài trước khi gửi API
+      const textToTranslate = truncateForTranslation(state.currentOriginal);
+      const translated = await translateText(textToTranslate, state.langSource, state.langTarget);
       const latency = Math.round(performance.now() - state.latencyStart);
       state.currentTranslated = translated;
 
@@ -321,7 +339,9 @@ async function runDemoStep() {
   setStatus('translating', '🔄 Đang dịch...');
   state.latencyStart = performance.now();
 
-  const translated = await translateText(sentence, state.langSource, state.langTarget);
+  // Cắt câu dài trước khi gửi API (demo mode)
+  const textToTranslate = truncateForTranslation(sentence);
+  const translated = await translateText(textToTranslate, state.langSource, state.langTarget);
   const latency = Math.round(performance.now() - state.latencyStart);
 
   setTranslatedText(translated);

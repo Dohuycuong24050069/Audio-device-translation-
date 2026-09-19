@@ -1,18 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="primary">#4F8EF7</color>
-    <color name="primary_variant">#3B6CCD</color>
-    <color name="accent">#7C5AF7</color>
-    <color name="bg_dark">#080C14</color>
-    <color name="bg_surface">#0D1422</color>
-    <color name="bg_card">#111928</color>
-    <color name="overlay_bg">#E6080E1C</color>
-    <color name="overlay_border">#4D4F8EF7</color>
-    <color name="text_primary">#EAF0FB</color>
-    <color name="text_secondary">#8B97B3</color>
-    <color name="text_green">#22D3A5</color>
-    <color name="text_yellow">#FFD166</color>
-    <color name="text_muted">#55627D</color>
-    <color name="divider_color">#26FFFFFF</color>
-    <color name="red">#FF4D6D</color>
+    <!-- Single indigo accent — đồng bộ với web UI -->
+    <color name="primary">#6366F1</color>
+    <color name="primary_variant">#4F46E5</color>
+    <color name="accent">#818CF8</color>
+    <color name="accent_dim">#266366F1</color>
+
+    <!-- Backgrounds -->
+    <color name="bg_dark">#06080F</color>
+    <color name="bg_surface">#0A0D18</color>
+    <color name="bg_card">#0E1220</color>
+    <color name="bg_elevated">#131828</color>
+
+    <!-- Overlay floating widget -->
+    <color name="overlay_bg">#E1080A16</color>
+    <color name="overlay_border">#476366F1</color>
+
+    <!-- Typography -->
+    <color name="text_primary">#F0F2FF</color>
+    <color name="text_secondary">#7B82A8</color>
+    <color name="text_accent">#818CF8</color>
+    <color name="text_muted">#3D4466</color>
+
+    <!-- Functional status (dots only) -->
+    <color name="status_ok">#34D399</color>
+    <color name="status_warn">#FBBF24</color>
+    <color name="status_danger">#F87171</color>
+
+    <!-- Deprecated aliases kept for layout refs -->
+    <color name="text_green">#818CF8</color>
+    <color name="text_yellow">#FBBF24</color>
+    <color name="divider_color">#1AFFFFFF</color>
+    <color name="red">#F87171</color>
+    <color name="danger">#F87171</color>
 </resources>

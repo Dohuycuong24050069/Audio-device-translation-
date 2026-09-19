@@ -587,9 +587,21 @@ class AudioCaptureService : Service() {
     private var lastPartialTranslated = ""
 
     /**
-     * Xử lý đoạn văn bản vừa nhận diện được:
-     * Dịch và hiển thị lên FloatingOverlayService theo thời gian thực
+     * Cắt văn bản dài tại ranh giới từ để tránh gửi đoạn quá dài cho API dịch.
+     * Ưu tiên cắt tại dấu câu (. , ! ? ;), nếu không có thì cắt tại khoảng trắng gần nhất.
+     * Giới hạn: 120 ký tự — đủ ngắn để ML Kit xử lý nhanh dưới 50ms.
      */
+    private fun truncateForTranslation(text: String, maxLen: Int = 120): String {
+        if (text.length <= maxLen) return text
+        // Tìm dấu câu gần cuối nhất trong phạm vi maxLen
+        val sub = text.substring(0, maxLen)
+        val punctIdx = sub.lastIndexOfAny(charArrayOf('.', '!', '?', ',', ';'))
+        if (punctIdx > maxLen / 2) return sub.substring(0, punctIdx + 1).trim()
+        // Cắt tại khoảng trắng gần nhất
+        val spaceIdx = sub.lastIndexOf(' ')
+        return if (spaceIdx > 0) sub.substring(0, spaceIdx).trim() else sub.trim()
+    }
+
     private fun handleRecognizedText(originalText: String, isFinal: Boolean) {
         serviceScope.launch {
             try {
@@ -597,14 +609,18 @@ class AudioCaptureService : Service() {
                 val now = System.currentTimeMillis()
 
                 if (isFinal) {
-                    translatedText = translationEngine?.translate(originalText, srcLang, tgtLang)
+                    // Cắt câu quá dài trước khi dịch để tránh lag
+                    val textToTranslate = truncateForTranslation(originalText)
+                    translatedText = translationEngine?.translate(textToTranslate, srcLang, tgtLang)
                     lastPartialTranslated = ""
                 } else {
-                    // Dịch phụ đề ngay cả khi đang nói (nếu cách lần dịch trước ít nhất 200ms hoặc từ mới xuất hiện)
-                    if (originalText != lastPartialTranslated && (now - lastTranslatedTime > 200 || originalText.length > lastPartialTranslated.length + 5)) {
+                    // Debounce 120ms (giảm từ 200ms) — đủ nhanh cho realtime mà không spam API
+                    if (originalText != lastPartialTranslated &&
+                        (now - lastTranslatedTime > 120 || originalText.length > lastPartialTranslated.length + 5)) {
                         lastTranslatedTime = now
                         lastPartialTranslated = originalText
-                        translatedText = translationEngine?.translate(originalText, srcLang, tgtLang)
+                        val textToTranslate = truncateForTranslation(originalText)
+                        translatedText = translationEngine?.translate(textToTranslate, srcLang, tgtLang)
                     }
                 }
 
